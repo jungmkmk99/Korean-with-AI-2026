@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>나만의 한국어 발음 연습 앱 만들기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Noto+Serif+KR:wght@500;700&family=Noto+Sans+SC:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FAF9F5; --side:#F1EEE5; --card:#FFFFFF; --ink:#2B2A26; --muted:#6F6A5F;
+  --line:#E2DCCF; --accent:#866B4A; --accent-ink:#FFFFFF; --accent-soft:#EFE7D9;
+  --code:#F6F3EC; --ok:#4D7A55;
+  --serif:"Noto Serif KR","Songti SC","Nanum Myeongjo",Georgia,serif;
+  --sans:"Noto Sans KR","Noto Sans SC","Apple SD Gothic Neo","Malgun Gothic","Microsoft YaHei",system-ui,sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#262522; --side:#1F1E1B; --card:#302E2A; --ink:#ECE8DF; --muted:#ABA496;
+    --line:#423F38; --accent:#C9AE86; --accent-ink:#262522; --accent-soft:#3A342A; --code:#2A2925; --ok:#8DBB94;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#262522; --side:#1F1E1B; --card:#302E2A; --ink:#ECE8DF; --muted:#ABA496;
+  --line:#423F38; --accent:#C9AE86; --accent-ink:#262522; --accent-soft:#3A342A; --code:#2A2925; --ok:#8DBB94;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 16px);scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.7}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.zh{font-family:"Noto Sans SC",var(--sans);color:var(--muted);font-size:.82em;font-weight:400}
+
+.layout{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+aside{background:var(--side);border-right:1px solid var(--line);padding:28px 18px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.brand{font-family:var(--serif);font-size:1.05rem;font-weight:700;line-height:1.4;margin:0 6px 4px}
+.brand-sub{margin:0 6px 22px;font-size:.82rem;color:var(--muted)}
+nav ol{list-style:none;margin:0;padding:0}
+nav a{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:8px;color:var(--ink);text-decoration:none;font-size:.93rem}
+nav a:hover{background:var(--accent-soft)}
+nav a.active{background:var(--card);box-shadow:0 0 0 1px var(--line)}
+.dot{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;font-size:.72rem;color:var(--muted);flex:none;background:var(--paper)}
+nav a.done .dot{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.progress{margin:24px 6px 0;font-size:.82rem;color:var(--muted)}
+.bar{height:6px;background:var(--line);border-radius:3px;margin-top:6px;overflow:hidden}
+.bar span{display:block;height:100%;width:0;background:var(--accent);transition:width .3s}
+
+main{padding:48px 32px 96px}
+.wrap{max-width:740px;margin:0 auto}
+.hero h1{font-family:var(--serif);font-weight:700;font-size:clamp(1.7rem,4vw,2.3rem);line-height:1.35;margin:0 0 6px;letter-spacing:-.01em}
+.hero .zh{display:block;font-size:1rem;margin-bottom:18px}
+.hero p{color:var(--muted);margin:0 0 14px}
+.prep{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:24px 0 8px}
+.prep div{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--card);font-size:.92rem}
+.prep b{display:block;font-weight:500}
+
+section.step{padding-top:48px;margin-top:40px;border-top:1px solid var(--line)}
+.step-head{display:flex;gap:14px;align-items:flex-start}
+.num{font-family:var(--serif);font-size:1.5rem;font-weight:700;color:var(--accent);line-height:1.3;min-width:1.6em}
+.step h2{font-family:var(--serif);font-size:1.4rem;margin:0;line-height:1.4;font-weight:700}
+.step h2 .zh{display:block;font-size:.9rem;margin-top:2px}
+.step p,.step li{max-width:68ch}
+.step ul,.step ol.inner{padding-left:1.2em}
+.note{background:var(--accent-soft);border-radius:10px;padding:12px 16px;margin:16px 0;font-size:.94rem}
+.toggle{display:inline-block;padding:1px 9px;border-radius:999px;font-size:.85rem;font-weight:500;border:1px solid var(--accent);color:var(--accent)}
+.toggle.on{background:var(--accent);color:var(--accent-ink)}
+
+/* prompt box styled like a chat composer */
+.composer{margin:20px 0 8px;background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 1px 2px rgba(60,50,30,.05),0 6px 20px rgba(60,50,30,.05);overflow:hidden}
+.composer:focus-within{border-color:var(--accent)}
+.composer-top{display:flex;justify-content:space-between;align-items:center;padding:10px 16px 0;font-size:.82rem;color:var(--muted)}
+.badge{display:none;padding:1px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-weight:500}
+.badge.show{display:inline-block}
+.composer textarea{display:block;width:100%;border:0;resize:none;background:transparent;color:var(--ink);font-family:var(--sans);font-size:.93rem;line-height:1.75;padding:8px 16px 4px;min-height:120px;overflow:hidden}
+.composer textarea:focus{outline:none}
+.composer-bar{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px 10px 16px;flex-wrap:wrap}
+.hint{font-size:.8rem;color:var(--muted)}
+.btns{display:flex;gap:8px;margin-left:auto}
+button{font-family:var(--sans);cursor:pointer}
+.btn{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:10px;padding:8px 14px;font-size:.9rem}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:500}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn .zh{color:inherit;opacity:.8}
+
+.mini{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;background:var(--code);border:1px solid var(--line);border-radius:12px;padding:10px 12px 10px 16px;margin:8px 0;font-size:.92rem}
+.mini span{white-space:pre-wrap}
+.mini .btn{padding:5px 11px;font-size:.82rem;flex:none}
+
+.check{display:flex;gap:10px;align-items:center;margin-top:20px;padding:12px 16px;border:1px dashed var(--line);border-radius:12px;cursor:pointer;font-size:.95rem}
+.check input{width:20px;height:20px;accent-color:var(--accent)}
+.check.done{border-style:solid;border-color:var(--accent);background:var(--accent-soft)}
+
+details{border:1px solid var(--line);border-radius:12px;background:var(--card);margin:10px 0;padding:0 16px}
+summary{cursor:pointer;padding:13px 0;font-weight:500;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"+";display:inline-block;width:1.2em;color:var(--accent);font-weight:700}
+details[open] summary::before{content:"−"}
+details > div{padding:0 0 14px}
+
+.teacher{margin-top:40px;font-size:.88rem;color:var(--muted);border-top:1px solid var(--line);padding-top:18px}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);background:var(--ink);color:var(--paper);padding:10px 18px;border-radius:999px;font-size:.92rem;opacity:0;pointer-events:none;transition:all .25s;z-index:10}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+@media (max-width:860px){
+  .layout{grid-template-columns:1fr}
+  aside{position:sticky;top:0;height:auto;z-index:5;padding:10px 12px;border-right:0;border-bottom:1px solid var(--line);padding-top:calc(10px + env(safe-area-inset-top,0px))}
+  .brand,.brand-sub,.progress{display:none}
+  nav ol{display:flex;gap:4px;overflow-x:auto}
+  nav a{white-space:nowrap;padding:6px 10px;font-size:.85rem}
+  main{padding:28px 18px 80px}
+  .prep{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside>
+    <p class="brand">발음 연습 앱 만들기</p>
+    <p class="brand-sub">Gemini 실습 매뉴얼 · AI로 배우는 한국어</p>
+    <nav aria-label="단계">
+      <ol id="nav">
+        <li><a href="#s0" data-step="0"><span class="dot">0</span>준비하기</a></li>
+        <li><a href="#s1" data-step="1"><span class="dot">1</span>교수요목 만들기</a></li>
+        <li><a href="#s2" data-step="2"><span class="dot">2</span>앱 만들기</a></li>
+        <li><a href="#s3" data-step="3"><span class="dot">3</span>결과·디자인</a></li>
+        <li><a href="#s4" data-step="4"><span class="dot">4</span>나만의 앱으로</a></li>
+        <li><a href="#s5" data-step="5"><span class="dot">5</span>공유·제출</a></li>
+        <li><a href="#help"><span class="dot">?</span>문제 해결</a></li>
+      </ol>
+    </nav>
+    <div class="progress">진행 <span id="pct">0</span>%<div class="bar"><span id="barfill"></span></div></div>
+  </aside>
+
+  <main>
+  <div class="wrap">
+    <header class="hero">
+      <h1>나만의 한국어 발음 연습 앱 만들기</h1>
+      <span class="zh">用 Gemini 制作我的韩语发音练习应用</span>
+      <p>프롬프트 세 개를 차례로 Gemini에 붙여 넣으면 단어·문장 발음을 연습하는 웹앱이 완성됩니다. 프롬프트는 상자 안에서 직접 고칠 수 있고, 고친 내용은 이 브라우저에 저장됩니다.</p>
+      <div class="prep">
+        <div><b>크롬 브라우저</b><span class="zh">Chrome 浏览器</span></div>
+        <div><b>구글 계정 로그인</b><span class="zh">登录 Google 账号</span></div>
+        <div><b>마이크 · 이어폰</b><span class="zh">麦克风 · 耳机</span></div>
+      </div>
+    </header>
+
+    <!-- STEP 0 -->
+    <section class="step" id="s0">
+      <div class="step-head"><span class="num">0</span>
+        <h2>Gemini 열기<span class="zh">打开 Gemini</span></h2></div>
+      <ol class="inner">
+        <li>크롬에서 <a href="https://gemini.google.com" target="_blank" rel="noopener">gemini.google.com</a>에 접속해 구글 계정으로 로그인합니다.</li>
+        <li>왼쪽 위의 <b>새 채팅</b>을 눌러 빈 대화를 엽니다.</li>
+        <li>입력창 아래에서 <b>Canvas</b> 버튼을 찾아 둡니다. 화면에 따라 <b>도구</b> 메뉴 안에 있을 수 있어요. 1단계에서는 끄고, 2단계부터 켭니다.</li>
+      </ol>
+      <div class="note">처음부터 끝까지 <b>같은 대화창</b>에서 진행하세요. 2단계 앱이 1단계에서 만든 단어와 문장을 그대로 가져다 씁니다.</div>
+      <label class="check" data-check="0"><input type="checkbox"> Gemini를 열고 새 채팅을 준비했어요 <span class="zh">已准备好</span></label>
+    </section>
+
+    <!-- STEP 1 -->
+    <section class="step" id="s1">
+      <div class="step-head"><span class="num">1</span>
+        <h2>발음 교수요목 만들기<span class="zh">制作发音教学大纲</span></h2></div>
+      <p>Canvas <span class="toggle">끄기 OFF</span> 상태에서 아래 프롬프트를 복사해 붙여 넣으세요. 앱에 들어갈 발음 항목과 단어·문장 표가 만들어집니다.</p>
+      <div class="composer" data-prompt="p1"></div>
+      <p><b>확인하기</b></p>
+      <ul>
+        <li>10개 항목이 쉬운 것부터 어려운 순으로 나왔나요?</li>
+        <li>실제 발음 표기가 맞나요? 예: 같이 [가치], 신라 [실라]</li>
+        <li>답이 중간에 끊겼다면 아래 문장을 보내세요.</li>
+      </ul>
+      <div class="mini"><span>계속 이어서 작성해 줘.</span><button class="btn" data-copy="계속 이어서 작성해 줘.">복사</button></div>
+      <label class="check" data-check="1"><input type="checkbox"> 교수요목 표를 확인했어요 <span class="zh">已确认大纲</span></label>
+    </section>
+
+    <!-- STEP 2 -->
+    <section class="step" id="s2">
+      <div class="step-head"><span class="num">2</span>
+        <h2>발음 연습 앱 만들기<span class="zh">制作练习应用</span></h2></div>
+      <p>이제 Canvas를 <span class="toggle on">켜기 ON</span> 상태로 바꾸고, 같은 대화창에 아래 프롬프트를 보내세요. 오른쪽에 앱 화면이 나타납니다.</p>
+      <div class="composer" data-prompt="p2"></div>
+      <p><b>직접 눌러 보기</b></p>
+      <ul>
+        <li>'말하기'를 처음 누르면 마이크 권한 창이 뜹니다. <b>허용</b>을 누르세요.</li>
+        <li>'듣기'와 '천천히 듣기' 소리가 잘 나오나요?</li>
+        <li>말한 내용이 글자로 화면에 나오나요?</li>
+      </ul>
+      <div class="note">잘 작동하면 다음 단계로 가기 전에 화면 위의 <b>공유</b> 버튼으로 링크를 하나 만들어 두세요. 다음 수정에서 앱이 망가져도 돌아갈 수 있어요.</div>
+      <label class="check" data-check="2"><input type="checkbox"> 앱이 만들어지고 듣기·말하기가 작동해요 <span class="zh">应用可以使用</span></label>
+    </section>
+
+    <!-- STEP 3 -->
+    <section class="step" id="s3">
+      <div class="step-head"><span class="num">3</span>
+        <h2>결과 화면과 디자인 다듬기<span class="zh">完善结果页和设计</span></h2></div>
+      <p>Canvas가 켜진 상태 그대로, 같은 대화창에 아래 프롬프트를 보내세요.</p>
+      <div class="composer" data-prompt="p3"></div>
+      <p><b>확인하기</b></p>
+      <ul>
+        <li>연습을 끝까지 하면 결과 화면이 나오나요?</li>
+        <li>녹음 중에 '말하기' 버튼이 빨갛게 바뀌나요?</li>
+        <li>안내 문구 옆에 중국어가 작게 보이나요?</li>
+      </ul>
+      <label class="check" data-check="3"><input type="checkbox"> 결과 화면과 디자인을 확인했어요 <span class="zh">已确认结果页</span></label>
+    </section>
+
+    <!-- STEP 4 -->
+    <section class="step" id="s4">
+      <div class="step-head"><span class="num">4</span>
+        <h2>나만의 앱으로 바꾸기<span class="zh">改成我自己的应用</span></h2></div>
+      <p>이제 원하는 기능을 더해 보세요. 요청은 <b>한 번에 하나씩</b> 보내야 앱이 덜 망가집니다. 아래는 예시입니다. 복사한 뒤 내 생각에 맞게 바꿔서 보내세요.</p>
+      <div class="mini"><span>앱 이름을 '○○의 발음 교실'로 바꾸고, 홈 화면 맨 위에 크게 보여 줘.</span><button class="btn" data-copy="앱 이름을 '○○의 발음 교실'로 바꾸고, 홈 화면 맨 위에 크게 보여 줘.">복사</button></div>
+      <div class="mini"><span>단어와 문장을 '여행' 주제로 바꿔 줘.</span><button class="btn" data-copy="단어와 문장을 '여행' 주제로 바꿔 줘.">복사</button></div>
+      <div class="mini"><span>연속으로 3번 맞히면 축하 애니메이션을 보여 줘.</span><button class="btn" data-copy="연속으로 3번 맞히면 축하 애니메이션을 보여 줘.">복사</button></div>
+      <div class="mini"><span>틀린 단어만 모아서 다시 연습하는 '복습' 버튼을 홈에 추가해 줘.</span><button class="btn" data-copy="틀린 단어만 모아서 다시 연습하는 '복습' 버튼을 홈에 추가해 줘.">복사</button></div>
+      <div class="note">좋은 요청은 <b>무엇을, 어디에, 어떻게</b>가 분명합니다. "더 예쁘게 해 줘"보다 "버튼 색을 하늘색으로 바꿔 줘"가 정확해요.</div>
+      <label class="check" data-check="4"><input type="checkbox"> 나만의 기능을 하나 이상 추가했어요 <span class="zh">已添加新功能</span></label>
+    </section>
+
+    <!-- STEP 5 -->
+    <section class="step" id="s5">
+      <div class="step-head"><span class="num">5</span>
+        <h2>공유하고 제출하기<span class="zh">分享和提交</span></h2></div>
+      <ol class="inner">
+        <li>앱 화면 위쪽의 <b>공유</b> 버튼을 누르고 링크를 복사합니다.</li>
+        <li>새 탭에 링크를 붙여 넣어 앱이 잘 열리는지 확인합니다.</li>
+        <li>선생님이 안내한 곳에 링크를 제출하고, 친구의 앱도 사용해 봅니다.</li>
+      </ol>
+      <div class="note">점수는 <b>AI가 내 말을 얼마나 알아들었는지</b>를 보여 줍니다. 발음이 맞아도 점수가 낮게 나올 때가 있어요. 언제 그런지 찾아서 친구들과 이야기해 보세요.</div>
+      <label class="check" data-check="5"><input type="checkbox"> 링크를 제출했어요 <span class="zh">已提交链接</span></label>
+    </section>
+
+    <!-- HELP -->
+    <section class="step" id="help">
+      <div class="step-head"><span class="num">?</span>
+        <h2>문제가 생겼을 때<span class="zh">遇到问题时</span></h2></div>
+      <details><summary>앱을 만들다가 코드가 중간에 끊겼어요</summary><div>
+        <p>데이터가 많으면 생길 수 있어요. 나누어서 넣어 달라고 요청하세요.</p>
+        <div class="mini"><span>1~5번 항목 데이터만 먼저 넣어서 앱을 만들어 줘.</span><button class="btn" data-copy="1~5번 항목 데이터만 먼저 넣어서 앱을 만들어 줘.">복사</button></div>
+        <div class="mini"><span>나머지 6~10번 항목 데이터도 앱에 추가해 줘.</span><button class="btn" data-copy="나머지 6~10번 항목 데이터도 앱에 추가해 줘.">복사</button></div>
+      </div></details>
+      <details><summary>'말하기'를 눌러도 반응이 없어요</summary><div>
+        <p>크롬 주소창 왼쪽의 아이콘을 눌러 <b>마이크</b>가 <b>허용</b>인지 확인하고, 페이지를 새로고침하세요. 다른 프로그램(줌 등)이 마이크를 쓰고 있지 않은지도 확인하세요.</p>
+      </div></details>
+      <details><summary>'듣기' 소리가 이상하거나 나오지 않아요</summary><div>
+        <p>화면 구석의 목소리 선택 메뉴에서 다른 한국어 목소리를 골라 보세요. 컴퓨터마다 설치된 목소리가 달라서 소리도 다르게 들립니다.</p>
+      </div></details>
+      <details><summary>수정했더니 앱이 망가졌어요</summary><div>
+        <div class="mini"><span>방금 수정하기 전 상태로 되돌려 줘.</span><button class="btn" data-copy="방금 수정하기 전 상태로 되돌려 줘.">복사</button></div>
+        <p>저장해 둔 공유 링크가 있다면 그 버전에서 다시 시작해도 됩니다.</p>
+      </div></details>
+      <details><summary>프롬프트에 쓴 기능이 빠졌어요</summary><div>
+        <p>빠진 기능을 짚어서 하나만 요청하세요.</p>
+        <div class="mini"><span>'천천히 듣기' 버튼이 빠졌어. 추가해 줘.</span><button class="btn" data-copy="'천천히 듣기' 버튼이 빠졌어. 추가해 줘.">복사</button></div>
+      </div></details>
+      <details><summary>정확하게 말했는데 점수가 낮아요</summary><div>
+        <p>음성 인식은 발음대로 받아 적기도 합니다. 예를 들어 '같이'를 정확히 [가치]로 말하면 "가치"로 적혀 틀렸다고 나올 수 있어요. 이렇게 요청해 보세요.</p>
+        <div class="mini"><span>철자와 실제 발음 표기를 모두 정답으로 인정하고, 음성 인식 후보 5개 중 하나라도 맞으면 정답으로 처리해 줘.</span><button class="btn" data-copy="철자와 실제 발음 표기를 모두 정답으로 인정하고, 음성 인식 후보 5개 중 하나라도 맞으면 정답으로 처리해 줘.">복사</button></div>
+      </div></details>
+
+      <p class="teacher">프롬프트 상자에서 고친 내용은 지금 사용하는 브라우저에만 저장됩니다. '원래대로'를 누르면 처음 프롬프트로 돌아갑니다.</p>
+    </section>
+  </div>
+  </main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ===== 프롬프트 원문 (여기를 고치면 모든 학생에게 기본값이 바뀝니다) ===== */
+const PROMPTS = {
+p1: `한국어 중급 수준 외국인 대학생(중국어 모어 화자)을 위한 발음 교수요목을 만들어 줘.
+외국인이 발음하기 어려운 한국어 발음 항목 10개를 골라, 쉬운 것부터 어려운 순으로 배열해 줘.
+2. 각 항목마다 다음을 표로 정리해 줘.
+   - 항목 이름과 발음 규칙 설명(한 문장, 한국어 + 간체 중국어)
+   - 해당 규칙이 들어간 단어 30개 (표기 / 실제 발음 예: 같이 [가치])
+   - 해당 규칙과 위의 단어가 들어간 문장 30개 (중급 수준, 30음절 이내, 표기 / 실제 발음)
+3. 단어와 문장은 대학생 생활과 관련된 자연스러운 표현으로 만들어 줘.
+형식은 표기 / 실제 발음으로 정리해 줘.`,
+p2: `위의 교수요목 데이터를 모두 사용해서 발음 연습 웹앱을 만들어 줘.
+
+[화면 흐름]
+홈(10개 항목 목록) → 항목 선택 → 1단계 단어 → 2단계 문장 → 3단계 결과
+
+[연습 문제 출제]
+- 한 번 연습할 때 단어 10개를 무작위로 뽑고, 2단계에서는 그 단어들과 짝인 문장을 보여 줘.
+- 다시 연습하면 아직 안 나온 단어부터 뽑고, 모두 나오면 다시 섞어서 처음부터 보여 줘.
+
+[1·2단계 기능]
+- 단어/문장과 실제 발음을 보여 줘. 예: 같이 [가치]
+- '듣기'(속도 0.9), '천천히 듣기'(속도 0.7), '말하기', '다음' 버튼과 점수 표시
+- '말하기'를 누르면 인식된 글자를 화면에 보여 주고 정확성 정도를 표시해 줘.
+
+[음성]
+- ko-KR 목소리 중 이름에 Natural, Online, Google이 들어간 것을 우선 사용해 줘.
+- 화면 구석에 목소리 선택 메뉴를 넣고, 고른 목소리를 기억해 줘.
+
+[저장]
+- 진행 상황과 기록은 브라우저에 저장해서, 다시 열어도 유지되게 해 줘.
+- 홈에서 항목별 진행 상황을 보여 줘.`,
+p3: `결과 화면과 디자인을 다음과 같이 해 줘.
+
+[결과]
+- 전체 발음 정확도 점수, 항목별 정답률, 자주 틀린 단어와 음절을 보여 줘.
+- 정답률이 가장 낮은 항목을 '다음에 연습할 항목'으로 추천해 줘.
+- 틀린 단어, 문장은 다음 연습 때 먼저 나오게 해 줘.
+
+[디자인]
+- 큰 글씨, 누르기 쉬운 버튼
+- 발음 평가 항목
+- 녹음 중에는 '말하기' 버튼이 빨간색으로 바뀌고 마이크 아이콘이 깜빡이게 해 줘.
+- 배경은 밝게 하고, 짙은 초록·파랑·남색은 버튼과 제목 같은 포인트 색으로 써 줘.
+- 버튼이 눌릴 때 통통 튀는 귀여운 애니메이션을 넣어 줘.
+- 버튼과 안내 문구는 한국어로 쓰고, 옆에 간체 중국어를 작게 적어 줘.`
+};
+const LABELS = {p1:"1차 프롬프트 · Canvas 끄기", p2:"2차 프롬프트 · Canvas 켜기", p3:"3차 프롬프트 · Canvas 켜기"};
+
+const store = {
+  get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} },
+  del(k){ try{ localStorage.removeItem(k); }catch(e){} }
+};
+
+const toastEl = document.getElementById('toast');
+let tTimer;
+function toast(msg){
+  toastEl.textContent = msg; toastEl.classList.add('show');
+  clearTimeout(tTimer); tTimer = setTimeout(()=>toastEl.classList.remove('show'), 1800);
+}
+
+async function copyText(text){
+  try{ await navigator.clipboard.writeText(text); return true; }
+  catch(e){
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.setAttribute('readonly',''); ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    let ok = false; try{ ok = document.execCommand('copy'); }catch(err){}
+    document.body.removeChild(ta); return ok;
+  }
+}
+
+function autosize(ta){ ta.style.height='auto'; ta.style.height = ta.scrollHeight + 'px'; }
+
+document.querySelectorAll('.composer').forEach(box=>{
+  const key = box.dataset.prompt;
+  const saved = store.get('prompt:'+key);
+  box.innerHTML = `
+    <div class="composer-top"><span>${LABELS[key]}</span><span class="badge">수정됨</span></div>
+    <textarea spellcheck="false" aria-label="${LABELS[key]} (직접 수정할 수 있어요)"></textarea>
+    <div class="composer-bar">
+      <span class="hint">상자 안을 눌러 직접 고칠 수 있어요</span>
+      <div class="btns">
+        <button class="btn" data-act="reset">원래대로</button>
+        <button class="btn primary" data-act="copy">복사 <span class="zh">复制</span></button>
+      </div>
+    </div>`;
+  const ta = box.querySelector('textarea');
+  const badge = box.querySelector('.badge');
+  ta.value = saved !== null ? saved : PROMPTS[key];
+  const sync = ()=>{ badge.classList.toggle('show', ta.value !== PROMPTS[key]); autosize(ta); };
+  ta.addEventListener('input', ()=>{
+    if(ta.value === PROMPTS[key]) store.del('prompt:'+key); else store.set('prompt:'+key, ta.value);
+    sync();
+  });
+  box.querySelector('[data-act="copy"]').addEventListener('click', async ()=>{
+    toast(await copyText(ta.value) ? '복사했어요. Gemini 입력창에 붙여 넣으세요 · 已复制' : '복사하지 못했어요. 상자 안을 직접 선택해 복사하세요');
+  });
+  box.querySelector('[data-act="reset"]').addEventListener('click', ()=>{
+    ta.value = PROMPTS[key]; store.del('prompt:'+key); sync(); toast('처음 프롬프트로 되돌렸어요');
+  });
+  requestAnimationFrame(sync);
+});
+window.addEventListener('resize', ()=>document.querySelectorAll('.composer textarea').forEach(autosize));
+
+document.querySelectorAll('[data-copy]').forEach(b=>{
+  b.addEventListener('click', async ()=>{
+    toast(await copyText(b.dataset.copy) ? '복사했어요 · 已复制' : '복사하지 못했어요. 직접 선택해 복사하세요');
+  });
+});
+
+/* checklist + progress */
+const checks = [...document.querySelectorAll('.check')];
+function refresh(){
+  let n = 0;
+  checks.forEach(c=>{
+    const i = c.dataset.check, on = c.querySelector('input').checked;
+    c.classList.toggle('done', on); if(on) n++;
+    const a = document.querySelector(`nav a[data-step="${i}"]`);
+    if(a){ a.classList.toggle('done', on); a.querySelector('.dot').textContent = on ? '✓' : i; }
+  });
+  const pct = Math.round(n / checks.length * 100);
+  document.getElementById('pct').textContent = pct;
+  document.getElementById('barfill').style.width = pct + '%';
+}
+checks.forEach(c=>{
+  const inp = c.querySelector('input');
+  inp.checked = store.get('check:'+c.dataset.check) === '1';
+  inp.addEventListener('change', ()=>{ store.set('check:'+c.dataset.check, inp.checked ? '1':'0'); refresh(); });
+});
+refresh();
+
+/* active nav */
+const links = [...document.querySelectorAll('nav a')];
+const io = new IntersectionObserver(es=>{
+  es.forEach(e=>{
+    if(e.isIntersecting){
+      links.forEach(l=>l.classList.toggle('active', l.getAttribute('href') === '#'+e.target.id));
+    }
+  });
+},{rootMargin:'-30% 0px -60% 0px'});
+document.querySelectorAll('section.step').forEach(s=>io.observe(s));
+</script>
+</body>
+</html>
