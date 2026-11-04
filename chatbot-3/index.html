@@ -1,0 +1,1027 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+<title>2단계 챗봇 제작 (2)</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column; dark sticky menu; work boxes merge into one prompt to paste into the tutor. */
+:root{
+  --paper:#F7F4EE; --card:#FFFDF9; --ink:#22201C; --muted:#6B655C; --line:#E4DED3;
+  --night:#2B2925; --night-fg:#F5F1EA; --night-soft:#3C3934;
+  --clay:#C96442; --clay-soft:#F3E3DA; --note:#EEF0E6; --note-ink:#3E4A2C;
+  --gpt:#2B2925; --gem:#2B2925;
+  --f-display:"Noto Serif KR","Nanum Myeongjo",Georgia,serif;
+  --f-body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#1E1D1A; --card:#272522; --ink:#ECE7DF; --muted:#A8A196; --line:#3A3733;
+  --night:#121110; --night-fg:#F5F1EA; --night-soft:#2E2C28;
+  --clay:#E08A68; --clay-soft:#3A2A22; --note:#2A2F22; --note-ink:#CFDAB8; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#1E1D1A; --card:#272522; --ink:#ECE7DF; --muted:#A8A196; --line:#3A3733;
+  --night:#121110; --night-fg:#F5F1EA; --night-soft:#2E2C28;
+  --clay:#E08A68; --clay-soft:#3A2A22; --note:#2A2F22; --note-ink:#CFDAB8; color-scheme:dark}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.75;word-break:keep-all;overflow-wrap:break-word}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--night)}
+.wrap{max-width:980px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* header */
+header.top{padding-block:56px 36px}
+.kicker{font-size:13px;letter-spacing:.08em;color:var(--muted);font-weight:600}
+h1{font-family:var(--f-display);font-weight:700;font-size:clamp(30px,5vw,44px);line-height:1.25;margin:10px 0 14px;text-wrap:balance}
+h1 em{font-style:normal;color:var(--clay)}
+.lede{max-width:62ch;color:var(--muted);font-size:17px;margin:0}
+.goals{display:grid;gap:8px;margin:24px 0 0;padding:0;list-style:none;max-width:70ch}
+.goals li{display:flex;gap:10px;align-items:baseline}
+.goals li::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:var(--clay);transform:translateY(-2px)}
+
+/* menu */
+nav.menu{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--night)}
+nav.menu .wrap{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding-block:8px}
+nav.menu .wrap::-webkit-scrollbar{display:none}
+nav.menu a{flex:none;color:var(--night-fg);text-decoration:none;font-size:14px;font-weight:500;padding:7px 14px;border-radius:999px;opacity:.82}
+nav.menu a:hover,nav.menu a:focus-visible{background:var(--night-soft);opacity:1;outline:none}
+nav.menu a.on{background:var(--night-fg);color:var(--night);opacity:1}
+
+/* sections */
+section{padding-block:56px 8px}
+.sec-label{font-size:13px;font-weight:600;letter-spacing:.08em;color:var(--clay)}
+h2{font-family:var(--f-display);font-weight:700;font-size:clamp(24px,3.6vw,32px);line-height:1.3;margin:6px 0 14px;text-wrap:balance}
+h3{font-size:19px;font-weight:700;margin:0 0 6px;line-height:1.45;text-wrap:balance}
+p{margin:0 0 12px;max-width:68ch}
+.muted{color:var(--muted)}
+strong,b{font-weight:700}
+.hl{background:var(--night);color:var(--night-fg);padding:1px 8px;border-radius:6px;font-weight:600;white-space:nowrap}
+kbd,.btn-name{font-family:var(--f-body);font-weight:700;background:var(--night);color:var(--night-fg);padding:1px 9px;border-radius:6px;font-size:.92em;white-space:nowrap}
+code{font-family:var(--f-mono);font-size:.9em;background:var(--clay-soft);padding:1px 6px;border-radius:5px}
+
+/* timeline */
+.phases{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0 20px}
+.phase{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;min-width:0}
+.phase.now{background:var(--night);color:var(--night-fg);border-color:var(--night)}
+.phase .when{font-size:13px;color:var(--muted)}
+.phase.now .when{color:var(--night-fg);opacity:.75}
+.phase .what{font-weight:700;font-size:17px;margin-top:4px}
+.phase .tag{display:inline-block;margin-top:8px;font-size:12px;font-weight:700;background:var(--clay);color:#fff;padding:1px 8px;border-radius:999px}
+@media (max-width:640px){.phases{grid-template-columns:1fr}}
+
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:16px 24px;margin-top:6px}
+.rule{border-top:2px solid var(--ink);padding-top:10px}
+.rule b{display:block;font-size:15px}
+.rule span{font-size:14.5px;color:var(--muted)}
+
+/* tables */
+.tbl{overflow-x:auto;margin:16px 0;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:15px}
+.compare table{min-width:560px}
+a{color:var(--clay);text-underline-offset:3px}
+nav.menu a{text-decoration:none}
+th,td{text-align:left;vertical-align:top;padding:12px 14px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:0}
+thead th{background:var(--night);color:var(--night-fg);font-weight:600;font-size:14px}
+thead th:first-child{border-top-left-radius:11px} thead th:last-child{border-top-right-radius:11px}
+td:first-child{font-weight:700}
+@media (min-width:600px){td:first-child{white-space:nowrap}}
+td code{white-space:nowrap}
+
+/* prompt box */
+.prompt{border-radius:14px;overflow:hidden;border:1px solid var(--night);margin:16px 0}
+.prompt-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--night);color:var(--night-fg);padding:10px 14px;font-size:14px;font-weight:600}
+.copy{font:inherit;font-size:13px;font-weight:700;background:var(--night-fg);color:var(--night);border:0;border-radius:8px;padding:6px 12px;cursor:pointer}
+.copy:focus-visible{outline:2px solid var(--clay);outline-offset:2px}
+.prompt pre{margin:0;padding:16px;max-height:420px;overflow:auto;background:var(--card);font-family:var(--f-body);font-size:15px;line-height:1.75;white-space:pre-wrap;word-break:keep-all}
+.prompt pre mark{background:var(--clay-soft);color:var(--clay);font-weight:600;border-radius:4px;padding:0 3px}
+.fillguide{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;margin:12px 0}
+.fillguide div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:15px}
+details{background:var(--card);border:1px solid var(--line);border-radius:12px;margin:12px 0}
+summary{cursor:pointer;padding:12px 16px;font-weight:600}
+details pre{margin:0;padding:0 16px 16px;font-family:var(--f-body);font-size:15px;white-space:pre-wrap}
+
+/* platform tabs */
+.tabs{display:flex;gap:6px;background:var(--night);padding:6px;border-radius:14px;margin:20px 0 8px;width:max-content;max-width:100%}
+.tabs button{font:inherit;font-weight:700;font-size:15px;border:0;border-radius:10px;padding:10px 18px;cursor:pointer;background:transparent;color:var(--night-fg);opacity:.75}
+.tabs button[aria-selected="true"]{background:var(--night-fg);color:var(--night);opacity:1}
+.tabs button:focus-visible{outline:2px solid var(--clay);outline-offset:2px}
+.panel-intro{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin:12px 0 8px}
+.panel-intro h3{margin-bottom:4px}
+
+/* steps */
+.steps{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:0;counter-reset:s}
+.step{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:28px;padding:26px 0;border-top:1px solid var(--line);align-items:start}
+.step.noimg{grid-template-columns:minmax(0,1fr)}
+.step .txt{min-width:0;display:grid;grid-template-columns:44px minmax(0,1fr);gap:0 14px}
+.num{grid-row:span 3;width:40px;height:40px;border-radius:50%;background:var(--night);color:var(--night-fg);display:grid;place-items:center;font-weight:700;font-size:16px;font-variant-numeric:tabular-nums}
+.step p{font-size:15.5px}
+.step ul{margin:4px 0 10px;padding-left:20px;font-size:15.5px}
+.shot{margin:0;min-width:0}
+.shot img{display:block;width:100%;max-width:100%;border-radius:12px;border:1px solid var(--line);box-shadow:0 1px 0 var(--line),0 10px 24px -18px rgba(0,0,0,.35)}
+.shot figcaption{font-size:13px;color:var(--muted);margin-top:8px}
+@media (max-width:760px){.step{grid-template-columns:minmax(0,1fr);gap:16px}}
+
+.callout{border-radius:12px;padding:14px 16px;margin:12px 0;font-size:15px}
+.callout.warn{background:var(--night);color:var(--night-fg);border:1px solid var(--night-soft)}
+.callout.warn b{color:var(--night-fg)}
+.callout.warn .hl,.callout.warn kbd,.callout.warn .btn-name{background:var(--night-fg);color:var(--night)}
+.callout.homework{background:linear-gradient(115deg,#C96B6E 0%,#A05C86 50%,#6E4F7E 100%);color:#FFF8F3;font-weight:500;box-shadow:0 10px 24px -18px rgba(60,30,50,.6)}
+.callout.homework b{color:#fff}
+.callout.tip{background:var(--note);color:var(--note-ink)}
+.callout p{margin:0 0 6px} .callout p:last-child{margin:0}
+.callout ul{margin:6px 0 0;padding-left:20px}
+
+/* compare */
+.compare td:first-child{color:var(--muted);font-weight:600;font-size:14px}
+.compare td.diff{background:var(--clay-soft)}
+.compare th:nth-child(2),.compare th:nth-child(3){width:40%}
+
+/* first chat */
+.say{display:grid;gap:10px;margin:16px 0}
+.bubble{justify-self:start;background:var(--night);color:var(--night-fg);padding:10px 16px;border-radius:16px 16px 16px 4px;font-weight:600;max-width:100%}
+.bubble.tutor{justify-self:end;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px 16px 4px 16px}
+.bubble small{display:block;font-weight:400;opacity:.7;font-size:12.5px}
+.write{background:var(--card);border:1px dashed var(--muted);border-radius:12px;padding:14px 16px;min-height:96px;color:var(--muted);font-size:15px}
+.faq{display:grid;gap:10px;margin-top:14px}
+.faq details{margin:0}
+.faq details p{padding:0 16px 4px;font-size:15px}
+footer{padding-block:48px 64px;color:var(--muted);font-size:13.5px}
+</style>
+<style>
+/* chatbot (2) additions */
+/* green boxes (tips, checklists) twice as strong as in chatbot (1) */
+:root{--note:#DDE1CD}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--note:#363F2A}}
+:root[data-theme="dark"]{--note:#363F2A}
+
+/* process chart (활동 안내) */
+:root{--brown:#8B5E3C}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--brown:#C29A72}}
+:root[data-theme="dark"]{--brown:#C29A72}
+.flow-box{margin:22px 0 20px;padding:18px 20px 20px;background:var(--card);border:2px solid var(--brown);border-radius:16px;box-shadow:0 6px 0 -1px color-mix(in srgb,var(--brown) 35%,transparent),0 16px 30px -14px rgba(60,35,15,.45)}
+.flow-box h3{margin:0 0 4px;color:var(--brown)}
+.flow-box .flow{margin-bottom:0}
+.callout.narrow{max-width:560px}
+/* section labels (활동 안내, ① 대화 주제 …): a clear rounded tag so learners see which activity they are in */
+.sec-label{display:inline-flex;align-items:center;gap:10px;font-size:19px;font-weight:700;letter-spacing:.04em;color:#fff;background:var(--clay);border:0;border-radius:12px;padding:8px 20px;margin-bottom:8px;box-shadow:0 5px 0 -1px color-mix(in srgb,var(--clay) 40%,transparent),0 14px 24px -14px rgba(60,35,15,.5)}.next-class{margin:14px 0;background:var(--card);border:1px solid var(--line);border-left:5px solid var(--clay);border-radius:12px;padding:14px 18px}
+.next-class .nc-label{font-size:13px;font-weight:700;letter-spacing:.06em;color:var(--clay);margin-bottom:4px}
+.next-class p{margin:0;font-size:15.5px;max-width:none}
+.nc-items{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.nc-items span{background:var(--clay-soft);color:var(--clay);font-weight:700;font-size:14.5px;border-radius:8px;padding:3px 10px}
+/* 과제: same layout as 다음 시간, in the beige / brown palette */
+.next-class.hw{background:color-mix(in srgb,var(--flow-tint) 40%,var(--card));border-color:color-mix(in srgb,var(--brown) 35%,var(--card));border-left-color:var(--brown)}
+.next-class.hw .nc-label{color:var(--brown)}
+.next-class.hw .nc-items span{background:var(--brown);color:#fff}
+.flow{list-style:none;margin:12px 0 20px;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:22px}
+.flow li{position:relative;min-width:0}
+.flow li+li::before{content:"";position:absolute;left:-17px;top:50%;width:12px;height:12px;border-top:3px solid var(--clay);border-right:3px solid var(--clay);transform:translateY(-50%) rotate(45deg)}
+.flow a{display:flex;flex-direction:column;gap:4px;height:100%;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 14px 12px;color:var(--ink);text-decoration:none;transition:border-color .15s}
+.flow a:hover,.flow a:focus-visible{border-color:var(--clay);outline:none}
+/* beige steps: each card 10% deeper than the one before */
+:root{--flow-tint:#D8C6A6}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--flow-tint:#8A7656}}
+:root[data-theme="dark"]{--flow-tint:#8A7656}
+.flow li:nth-child(1) a{background:color-mix(in srgb,var(--flow-tint) 10%,var(--card));border-color:color-mix(in srgb,var(--flow-tint) 30%,var(--card))}
+.flow li:nth-child(2) a{background:color-mix(in srgb,var(--flow-tint) 20%,var(--card));border-color:color-mix(in srgb,var(--flow-tint) 40%,var(--card))}
+.flow li:nth-child(3) a{background:color-mix(in srgb,var(--flow-tint) 30%,var(--card));border-color:color-mix(in srgb,var(--flow-tint) 50%,var(--card))}
+.flow li:nth-child(4) a{background:color-mix(in srgb,var(--flow-tint) 40%,var(--card));border-color:color-mix(in srgb,var(--flow-tint) 60%,var(--card))}
+.flow li:nth-child(5) a{background:color-mix(in srgb,var(--flow-tint) 50%,var(--card));border-color:color-mix(in srgb,var(--flow-tint) 70%,var(--card))}
+.flow .f-no{font-size:12.5px;font-weight:700;color:var(--clay)}
+.flow b{font-size:15.5px;line-height:1.4}
+.flow .f-do{font-size:13.5px;color:var(--muted);line-height:1.5}
+.flow .f-out{margin-top:auto;padding-top:6px;font-size:13px;font-weight:700}
+.flow li:not(:first-child):not(:last-child) .f-out{color:var(--clay)}
+.flow li:first-child .f-out{font-weight:500;color:var(--muted)}
+.flow li:last-child .f-out{display:inline-block;align-self:flex-start;background:var(--brown);color:#fff;border-radius:999px;padding:1px 10px;margin-top:auto}
+/* 과제 box in the page's beige / brown palette */
+.callout.homework{background:color-mix(in srgb,var(--flow-tint) 45%,var(--card));color:var(--ink);font-weight:500;border:2px solid var(--brown);border-radius:14px;padding:14px 18px;box-shadow:0 6px 0 -1px color-mix(in srgb,var(--brown) 30%,transparent),0 14px 26px -16px rgba(60,35,15,.45)}
+.callout.homework b{display:inline-block;background:var(--brown);color:#fff;border-radius:999px;padding:0 12px;margin-right:6px}
+@media (max-width:860px){
+  .flow{grid-template-columns:minmax(0,1fr);gap:20px}
+  .flow li+li::before{left:50%;top:-15px;transform:translateX(-50%) rotate(135deg)}
+}
+
+/* chat window mock (④) */
+:root{--cw-bg:#FAF9F5;--cw-line:#E6E3D9;--cw-me:#F0EEE6;--cw-ink:#141413;--cw-muted:#73726C;--cw-in:#FFFFFF}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--cw-bg:#262624;--cw-line:#3A3936;--cw-me:#141413;--cw-ink:#F0EEE6;--cw-muted:#A6A39A;--cw-in:#30302E}}
+:root[data-theme="dark"]{--cw-bg:#262624;--cw-line:#3A3936;--cw-me:#141413;--cw-ink:#F0EEE6;--cw-muted:#A6A39A;--cw-in:#30302E}
+.chatwin{max-width:720px;margin:18px 0;background:var(--cw-bg);color:var(--cw-ink);border:1px solid var(--cw-line);border-radius:18px;overflow:hidden;box-shadow:0 12px 32px -22px rgba(0,0,0,.45)}
+.cw-top{display:flex;align-items:baseline;gap:10px;padding:12px 18px;border-bottom:1px solid var(--cw-line);font-size:14.5px}
+.cw-title{font-weight:600}
+.cw-sub{color:var(--cw-muted);font-size:13px}
+.cw-body{padding:20px 18px 8px;display:grid;gap:6px}
+.cw-msg{font-size:15.5px;line-height:1.7;max-width:100%}
+.cw-msg p{margin:0 0 6px}.cw-msg p:last-child{margin:0}
+.cw-msg.me{justify-self:end;background:var(--cw-me);border-radius:14px;padding:9px 14px;max-width:80%;margin-top:10px}
+.cw-msg.ai{justify-self:start;padding:6px 2px;margin-top:8px;font-family:var(--f-display);font-size:15.5px}
+.cw-note{font-size:12.5px;color:var(--clay);font-weight:600;line-height:1.5}
+.cw-note.right{justify-self:end;text-align:right;max-width:80%}
+.cw-gap{text-align:center;color:var(--cw-muted);font-size:13px;margin:12px 0 2px}
+.cw-gap span{background:var(--cw-bg);padding:0 10px}
+.cw-gap{background:linear-gradient(var(--cw-line),var(--cw-line)) center/100% 1px no-repeat}
+.cw-table{border-collapse:collapse;margin-top:6px;font-family:var(--f-body);font-size:14px;width:auto}
+.cw-table th,.cw-table td{border:1px solid var(--cw-line);padding:6px 10px;font-weight:400;background:transparent;color:var(--cw-ink)}
+.cw-table th{font-weight:600;font-size:13.5px}
+.cw-table b{font-weight:800;color:var(--clay)}
+.cw-compose{margin:8px 14px 14px;background:var(--cw-in);border:1px solid var(--cw-line);border-radius:16px;padding:12px 12px 8px}
+.cw-input{color:var(--cw-muted);font-size:15px;padding:0 4px 10px}
+.cw-tools{display:flex;align-items:center;gap:8px}
+.cw-icon{display:grid;place-items:center;width:32px;height:32px;border:1px solid var(--cw-line);border-radius:9px;color:var(--cw-muted)}
+.cw-send{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;background:var(--clay);color:#fff}
+@media (max-width:520px){.cw-msg.me,.cw-note.right{max-width:92%}.cw-body{padding:16px 12px 6px}}
+.callout.warn code{background:var(--night-fg);color:var(--night)}
+.today{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:12px;margin:16px 0}
+.today .box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.today .box.now{border:2px solid var(--clay)}
+.today .box h3{font-size:16px;margin-bottom:8px}
+.today .box ul{margin:0;padding-left:20px}
+.stack{display:grid;gap:6px;margin:16px 0;max-width:560px}
+.stack div{display:flex;justify-content:space-between;gap:12px;align-items:center;border-radius:10px;padding:9px 14px;font-weight:600;font-size:15px;background:var(--card);border:1px solid var(--line)}
+.stack div span{font-weight:500;font-size:13px;color:var(--muted);white-space:nowrap}
+.stack div.chg{background:var(--clay-soft);border-color:var(--clay)}
+.stack div.chg span{color:var(--clay);font-weight:700}
+.stack div.next span{color:var(--ink)}
+.think{display:grid;gap:10px;margin:12px 0}
+.think div{background:var(--card);border-left:4px solid var(--clay);border-radius:0 12px 12px 0;padding:12px 16px;font-size:15.5px}
+.where{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px;margin:14px 0}
+.where div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-size:15px}
+.where div b{display:block;margin-bottom:2px}
+.where.one-col{grid-template-columns:minmax(0,1fr)}
+.where .oneline b{display:inline;margin:0}
+@media (min-width:1080px){.where .oneline{white-space:nowrap}}
+.acts td:first-child{white-space:normal}
+.acts table{min-width:0}
+.acts tr.must td{background:var(--clay-soft)}
+.acts .pick{text-align:center;white-space:nowrap;width:1%}
+.acts .pick input{width:20px;height:20px;accent-color:var(--clay);cursor:pointer}
+.acts .pick input:disabled{cursor:default}
+.legend{font-size:14px;color:var(--muted);margin:4px 0 0}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card);margin:14px 0}
+.split>div{padding:12px 16px;min-width:0}
+.split>div+div{border-left:1px solid var(--line)}
+.split h4{margin:0 0 6px;font-size:15px}
+.split textarea{min-height:120px}
+@media (max-width:560px){.split{grid-template-columns:1fr}.split>div+div{border-left:0;border-top:1px solid var(--line)}}
+textarea{width:100%;min-height:200px;font:inherit;font-size:15px;line-height:1.7;color:var(--ink);background:var(--card);border:1px dashed var(--muted);border-radius:12px;padding:12px 14px;resize:vertical}
+textarea:focus{outline:2px solid var(--clay);outline-offset:1px;border-style:solid}
+.split textarea{border:0;padding:0;border-radius:0;background:transparent}
+.split textarea:focus{outline:none}
+.field{margin:14px 0}
+.field label{display:block;font-weight:700;margin-bottom:6px}
+.field-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:6px}
+.field-head label{margin:0}
+.copy.copy-light{background:var(--night);color:var(--night-fg)}
+.field .muted{font-size:14px;margin:6px 0 0}
+.check{background:var(--note);color:var(--note-ink);border-radius:12px;padding:14px 16px;margin:16px 0}
+.check h3{font-size:16px;margin-bottom:8px}
+.check ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.check li{display:flex;gap:10px;align-items:baseline;font-size:15px}
+.check li .mk{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;border:2px solid currentColor;opacity:.55;transform:translateY(4px)}
+.check li.ok .mk{background:var(--note-ink);color:var(--note);border-color:var(--note-ink);opacity:1}
+.check li label{display:flex;gap:10px;align-items:baseline;cursor:pointer}
+.check input[type=checkbox]{width:18px;height:18px;accent-color:var(--clay);transform:translateY(3px)}
+.check .auto{font-size:12.5px;opacity:.75;margin-left:4px}
+.sched td:first-child{white-space:nowrap}
+summary::marker{color:var(--clay)}
+.board{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:16px 0}
+.board-head{font-weight:700;margin-bottom:8px}
+.board-fixed{font-size:15px;color:var(--muted);padding:8px 12px;border:1px dashed var(--line);border-radius:10px;margin-bottom:6px}
+.chip{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:0 8px;background:var(--clay);color:#fff;vertical-align:1px}
+.chip.opt{background:var(--note);color:var(--note-ink)}
+.ord-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.ord-list li{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:grab;font-size:15px;touch-action:none;user-select:none}
+.ord-list li.dragging{cursor:grabbing;background:var(--clay-soft);border-color:var(--clay)}
+.ord-list li.dragging{opacity:.45;border-style:dashed}
+.ord-list li.over{border-color:var(--clay);box-shadow:0 0 0 2px var(--clay-soft)}
+.ord-list .grip{color:var(--muted);font-size:18px;line-height:1;user-select:none}
+.ord-list .no{font-weight:700;font-variant-numeric:tabular-nums;min-width:1.6em}
+.ord-list .main{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;min-width:0}
+.ord-list .main b{white-space:nowrap}
+.ord-list input{font:inherit;font-size:14px;flex:1 1 160px;min-width:0;border:1px solid var(--line);border-radius:8px;padding:4px 8px;background:var(--card);color:var(--ink)}
+.ord-list .pos{font:inherit;font-size:14px;font-weight:700;border:1px solid var(--clay);border-radius:8px;padding:4px 6px;background:var(--card);color:var(--clay);cursor:pointer}
+.ord-list .mv{display:flex;gap:4px}
+.ord-list .mv button{font:inherit;font-size:13px;width:30px;height:30px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);cursor:pointer}
+.ord-list .mv button:disabled{opacity:.3;cursor:default}
+.reveal{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:12px 0}
+.reveal>.muted{font-size:14.5px;margin-left:6px}
+.reveal-btn{font:inherit;font-weight:700;font-size:15px;background:var(--clay);color:#fff;border:0;border-radius:10px;padding:8px 16px;cursor:pointer}
+.reveal-btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.reveal-btn[aria-expanded="true"] span{display:inline-block;transform:rotate(180deg)}
+.reveal .prompt{margin:12px 0 0}
+summary:hover{color:var(--clay)}
+
+/* vertical menu: stacked list on phones, sticky sidebar on wide screens */
+nav.menu{position:static}
+nav.menu .wrap{flex-direction:column;gap:2px;overflow:visible;padding-block:12px}
+nav.menu a{border-radius:10px;padding:8px 14px}
+@media (min-width:1080px){
+  html{scroll-padding-top:24px}
+  .layout{display:grid;grid-template-columns:210px minmax(0,1fr);gap:40px;max-width:1260px;margin:0 auto;padding-inline:24px}
+  header.top .wrap{max-width:1260px;padding-left:274px;padding-right:24px}
+  nav.menu{position:sticky;top:24px;align-self:start;margin-top:56px;background:var(--night);border-radius:14px}
+  nav.menu .wrap{padding:10px}
+  main.wrap{max-width:980px;margin:0;padding:0}
+  footer .wrap{max-width:1260px;padding-left:274px}
+}
+</style>
+
+<style>
+/* chatbot (3) additions */
+.use-tag{display:inline-block;margin-top:8px;background:var(--clay);color:#fff;font-weight:700;font-size:14.5px;border-radius:999px;padding:3px 14px}
+.goals-label{margin-top:24px;font-size:14px;font-weight:700;letter-spacing:.06em;color:var(--clay)}
+.flow{grid-template-columns:repeat(6,minmax(0,1fr));gap:20px}
+.flow li:nth-child(7) a{background:color-mix(in srgb,var(--flow-tint) 70%,var(--card));border-color:color-mix(in srgb,var(--flow-tint) 90%,var(--card))}
+.flow li:nth-child(6) a{background:color-mix(in srgb,var(--flow-tint) 60%,var(--card));border-color:color-mix(in srgb,var(--flow-tint) 80%,var(--card))}
+.stack div.done{opacity:.8}
+.stack div.done span{color:var(--note-ink)}
+.found{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:16px 0}
+.found h3{font-size:16px;margin-bottom:8px}
+.found ol{margin:0;padding-left:22px;display:grid;gap:6px;font-size:15px}
+.found ol li .chip{margin-left:6px}
+.found .empty{color:var(--muted);font-size:15px;margin:0}
+.catpick{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}
+.catpick label{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:4px 12px;font-size:14.5px;cursor:pointer}
+.catpick label.on{background:var(--clay-soft);border-color:var(--clay);color:var(--clay);font-weight:700}
+.catpick input{accent-color:var(--clay)}
+.mcards{display:grid;gap:14px;margin:16px 0}
+.mcard{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.mcard-head{display:flex;align-items:center;gap:10px;background:var(--night);color:var(--night-fg);padding:10px 16px;font-weight:700}
+.mcard-head .chip{background:var(--clay)}
+.mcard ul{list-style:none;margin:0;padding:6px 16px 4px}
+.mcard li{border-bottom:1px solid var(--line);padding:10px 0}
+.mcard li:last-child{border-bottom:0}
+.mcard li>label{display:grid;grid-template-columns:22px minmax(0,1fr);gap:4px 10px;cursor:pointer}
+.mcard li input[type=checkbox]{width:18px;height:18px;accent-color:var(--clay);margin-top:5px}
+.mcard .what{font-weight:700;font-size:15px}
+.mcard .ex{grid-column:2;font-size:15px;color:var(--muted);line-height:1.9}
+.mcard li.on .ex{color:var(--ink)}
+.mcard input.fill{font:inherit;font-size:14.5px;border:1px solid var(--clay);border-radius:6px;padding:0 6px;background:var(--clay-soft);color:var(--clay);font-weight:600;max-width:100%}
+.mcard .own{display:flex;gap:10px;align-items:center;padding:10px 16px 14px;border-top:1px dashed var(--line)}
+.mcard .own b{flex:none;font-size:14.5px}
+.mcard .own input{flex:1;min-width:0;font:inherit;font-size:14.5px;border:1px solid var(--line);border-radius:8px;padding:5px 10px;background:var(--paper);color:var(--ink)}
+.stub{background:var(--card);border:1px dashed var(--muted);border-radius:14px;padding:18px;color:var(--muted)}
+@media (max-width:1100px){.flow{grid-template-columns:repeat(3,minmax(0,1fr))}.flow li:nth-child(4)::before{display:none}}
+@media (max-width:860px){.flow{grid-template-columns:minmax(0,1fr)}.flow li:nth-child(4)::before{display:block}}
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="kicker">AI로배우는한국어 · 2단계 챗봇 제작 (2)</div>
+    <h1>나에게 맞는 튜터로 <em>업그레이드하기</em></h1>
+    <div class="goals-label">수업 목표</div>
+    <ul class="goals" style="margin-top:8px">
+      <li>챗봇의 수업 방식을 나에게 맞게 바꿀 수 있다.</li>
+      <li>챗봇이 대화할 때 꼭 지켜야 할 것을 나에게 맞게 바꿀 수 있다.</li>
+    </ul>
+  </div>
+</header>
+
+<div class="layout">
+<nav class="menu" aria-label="매뉴얼 메뉴">
+  <div class="wrap">
+    <a href="#plan">활동 안내</a>
+    <a href="#think">생각해 보기</a>
+    <a href="#bring">① 2단계-1 프롬프트</a>
+    <a href="#method">② 수업 방식</a>
+    <a href="#rules">③ 꼭 지켜야 할 것</a>
+    <a href="#apply">④ 튜터에 넣고 확인</a>
+    <a href="#next">⑤ 다음 시간까지</a>
+  </div>
+</nav>
+
+<main class="wrap">
+
+<section id="plan">
+  <div class="sec-label">활동 안내</div>
+  <h2>3주 동안 2단계 맞춤형 챗봇과 6번 대화하기</h2>
+  <div class="phases">
+    <div class="phase"><div class="when">챗봇 1~2주차(수업 8·9주차)</div><div class="what">교수자가 준 프롬프트로 챗봇 만들기</div></div>
+    <div class="phase now"><div class="when">챗봇 3~5주차(수업 10~12주차)</div><div class="what">나에게 맞는 챗봇으로 개선하기</div><span class="tag">지금</span></div>
+    <div class="phase"><div class="when">챗봇 6~8주차(수업 13~15주차)</div><div class="what">나만의 챗봇 새로 설계하기</div></div>
+  </div>
+  <ul>
+    <li>지난 시간에 만든 2단계 튜터의 프롬프트를 <b>2단계-1</b>, 오늘 고친 프롬프트를 <b>2단계-2</b>라고 부릅니다.</li>
+    <li>오늘은 <b>새 프로젝트(새 스킬)를 만들지 않습니다.</b><br>지금 쓰는 2단계 튜터의 지침을 고칩니다.<br>같은 프로젝트에 지난 대화가 있어야 튜터가 회차를 기억할 수 있기 때문입니다.</li>
+    <li>프롬프트의 <b>#</b> 부분 6개 중 4개를 바꿉니다.<br>지난 시간에 2개를 바꿨고, 오늘 나머지 2개를 바꿉니다.</li>
+  </ul>
+
+  <div class="flow-box">
+  <h3>오늘 수업의 흐름</h3>
+  <ol class="flow" aria-label="오늘 수업의 흐름">
+    <li><a href="#think"><span class="f-no">생각해 보기</span><b>2단계 튜터 돌아보기</b><span class="f-out">좋았던 점, 바꾸고 싶은 점</span></a></li>
+    <li><a href="#bring"><span class="f-no">①</span><b>2단계-1 프롬프트 가져오기</b><span class="f-do">지침 복사해서 붙여 넣기</span><span class="f-out">→ 내 활동 목록</span></a></li>
+    <li><a href="#method"><span class="f-no">②</span><b>수업 방식 정하기</b><span class="f-do">내 활동마다 가르치는 방법 고르기</span><span class="f-out">→ # 수업 방식</span></a></li>
+    <li><a href="#rules"><span class="f-no">③</span><b>꼭 지켜야 할 것 정하기</b><span class="f-do">말하는 방법, 반응하는 방법 고르기</span><span class="f-out">→ # 대화할 때 꼭 지켜야 할 것</span></a></li>
+    <li><a href="#apply"><span class="f-no">④</span><b>튜터에 넣고 확인하기</b><span class="f-do">자동 완성 · 등급 파일 올리기</span><span class="f-out">→ 2단계-1 지침 수정하기</span></a></li>
+    <li><a href="#next"><span class="f-no">⑤</span><b>다음 시간까지</b><span class="f-do">활동지 제출 · 대화 2번</span><span class="f-out">과제</span></a></li>
+  </ol>
+  </div>
+  <div class="stack" aria-label="프롬프트에서 바꾸는 부분">
+    <div># 역할<span>그대로</span></div>
+    <div># 사용자 정보<span>그대로</span></div>
+    <div class="done"># 대화 주제<span>지난 시간에 바꿈 ✓</span></div>
+    <div class="done"># 수업 진행 순서<span>지난 시간에 바꿈 ✓</span></div>
+    <div class="chg"># 수업 방식<span>오늘 바꿈 · ②</span></div>
+    <div class="chg"># 대화할 때 꼭 지켜야 할 것<span>오늘 바꿈 · ③</span></div>
+  </div>
+  <div class="callout tip narrow"><p>활동이 하나 끝날 때마다 <b>✔ 다음으로 넘어가기 전에 확인하기</b>를 모두 확인한 뒤 다음 활동으로 넘어갑니다.</p></div>
+</section>
+
+<section id="think">
+  <div class="sec-label">생각해 보기</div>
+  <h2>2단계 튜터와 대화해 보니 어땠나요?</h2>
+  <p>'챗봇 대화 기록' 문서에 써 둔 <b>불편했던 점, 바꾸고 싶은 점</b>을 다시 읽어 보고, 아래 질문의 답을 생각해 보세요.</p>
+  <div class="think">
+    <div>튜터가 가르치는 방식 중 <b>좋았던 점과 바꾸고 싶은 점</b>은 무엇인가요?<br>(예: 질문하는 방법, 틀린 것을 고쳐 주는 방법, 설명의 길이)<br><span class="use-tag">→ ② 수업 방식에서 사용</span></div>
+    <div>튜터와 대화하면서 불편하거나 아쉬웠던 순간이 있었나요?<br>튜터가 <b>꼭 지켜 주었으면 하는 것</b>은 무엇인가요?<br>(예: 너무 길게 말하지 않기, 영어를 쓰지 않기, 내 말을 끊지 않기)<br><span class="use-tag">→ ③ 꼭 지켜야 할 것에서 사용</span></div>
+  </div>
+</section>
+
+<section id="bring">
+  <div class="sec-label">① 2단계-1 프롬프트</div>
+  <h2>지난 시간에 만든 프롬프트 가져오기</h2>
+  <p>지난 시간에 <b>내가 정한 수업 진행 순서</b>가 이 프롬프트에 들어 있습니다.<br>붙여 넣으면 내 활동을 찾아 목록으로 보여 주고, ②에서 그 활동의 수업 방식을 고를 수 있게 합니다.</p>
+
+  <div class="where">
+    <div><b>ChatGPT</b>2단계 튜터 프로젝트 › <span class="btn-name">⋯</span> › <span class="btn-name">프로젝트 설정</span>을 엽니다.<br><span class="btn-name">지침</span> 칸을 누르고 <kbd>Ctrl</kbd>+<kbd>A</kbd>, <kbd>Ctrl</kbd>+<kbd>C</kbd>로 전체를 복사합니다.<br>아직 아무것도 바꾸지 말고 창을 닫습니다.</div>
+    <div><b>Gemini</b>컴퓨터에서 <span class="btn-name">⚙ 설정</span> › <span class="btn-name">스킬</span> › 2단계 튜터 스킬을 엽니다.<br><b>요청 사항</b> 칸을 누르고 <kbd>Ctrl</kbd>+<kbd>A</kbd>, <kbd>Ctrl</kbd>+<kbd>C</kbd>로 전체를 복사합니다.<br>저장을 누르지 말고 닫습니다.</div>
+  </div>
+  <div class="callout tip"><p><b>1단계 튜터가 아니라 2단계 튜터</b>의 프롬프트를 가져옵니다.<br>2단계 튜터에는 3주 1회~5주 2회의 내 주제와 내 수업 진행 순서가 들어 있습니다.</p></div>
+
+  <div class="field">
+    <label for="t-base">2단계-1 프롬프트 전체를 여기에 붙여 넣기</label>
+    <textarea id="t-base" spellcheck="false" placeholder="# 역할&#10;당신은 한국어 … 학습자를 … 수준으로 이끌어 주는 나의 한국어 튜터이며, …&#10;…&#10;# 수업 진행 순서&#10;…&#10;# 대화할 때 꼭 지켜야 할 것&#10;…"></textarea>
+    <p class="muted">이 칸의 내용은 지금 쓰는 브라우저에만 저장됩니다.<br>2단계 프롬프트를 찾을 수 없으면 <a href="https://jungmkmk99.github.io/Korean-with-AI-2026/chatbot-2/#apply">챗봇 만들기 (2) ③</a>에서 다시 만들어 붙여 넣으세요.</p>
+  </div>
+
+  <div class="found" id="found">
+    <h3>내 '# 수업 진행 순서'에서 찾은 활동</h3>
+    <div id="found-list"><p class="empty">위 칸에 프롬프트를 붙여 넣으면 여기에 나옵니다.</p></div>
+    <div id="found-cats" hidden>
+      <p class="muted" style="margin:14px 0 0;font-size:14.5px">②에서 수업 방식을 정할 활동입니다.<br>오늘은 <b>자유 대화, 문법, 어휘, 발음, 피드백</b>만 바꿉니다.<br>목록과 다르면 눌러서 고치세요.<br><b>피드백</b>은 모든 대화에 들어가므로 항상 들어갑니다.</p>
+      <div class="catpick" id="catpick"></div>
+    </div>
+  </div>
+
+  <div class="check" id="chk-bring">
+    <h3>✔ 다음으로 넘어가기 전에 확인하기 <span class="auto">(칸에 붙여 넣으면 자동으로 확인됩니다)</span></h3>
+    <ul>
+      <li data-k="heads"><span class="mk">✓</span><span id="heads-msg"># 제목 6개(역할, 사용자 정보, 대화 주제, 수업 진행 순서, 수업 방식, 대화할 때 꼭 지켜야 할 것)가 모두 있습니다.</span></li>
+      <li data-k="acts"><span class="mk">✓</span><span><code># 수업 진행 순서</code>에서 내 활동을 찾았습니다.</span></li>
+      <li data-k="same"><label><input type="checkbox" id="cb-same"><span>찾은 활동이 지난 시간에 정한 내 수업 진행 순서와 같습니다.</span></label></li>
+    </ul>
+  </div>
+</section>
+
+<section id="method">
+  <div class="sec-label">② 수업 방식</div>
+  <h2>튜터가 나를 어떻게 가르칠지 정하기</h2>
+  <ul>
+    <li>오늘은 <b>자유 대화, 문법, 어휘, 발음, 피드백</b>의 수업 방식만 바꿉니다. 이 중 ①에서 찾은 내 활동의 카드만 나옵니다. 피드백은 항상 나옵니다.</li>
+    <li>읽기, 퀴즈, 샘플 대화 같은 다른 활동은 바꾸지 않습니다. 수업 진행 순서에 쓴 대로 진행합니다.</li>
+    <li>체크하면 아래 '# 수업 방식'에 <b>자동으로</b> 들어갑니다. 바꾸고 싶은 것만 고르면 됩니다.</li>
+    <li><mark style="background:var(--clay-soft);color:var(--clay);font-weight:600;border-radius:4px;padding:0 3px">색칠한 칸</mark>의 숫자나 말은 나에게 맞게 바꿉니다. 원하는 것이 없으면 카드 아래 <b>직접 쓰기</b>에 씁니다.</li>
+    <li>"자세히", "많이"처럼 막연한 말보다 <b>숫자와 예</b>를 넣어 구체적으로 씁니다. (예: "어휘를 많이" → "어휘를 5개")</li>
+    <li>프롬프트에 정답은 없습니다. 내가 가장 공부하기 좋은 방식이면 모두 정답입니다.</li>
+  </ul>
+
+  <h3 style="margin-top:22px">1) 내 활동마다 바꾸고 싶은 것 고르기</h3>
+  <div class="mcards" id="mcards"></div>
+  <p id="mcards-empty" class="stub">①에 2단계-1 프롬프트를 붙여 넣으면 내 활동의 카드가 여기에 나옵니다.</p>
+
+  <h3 style="margin-top:22px">2) 나의 '# 수업 방식' 확인하기</h3>
+  <div class="prompt">
+    <div class="prompt-bar"><span>나의 '# 수업 방식'</span><span style="display:flex;gap:6px"><button class="copy" type="button" data-target="p-method">복사</button><button class="copy" type="button" id="put-method">아래 칸에 넣기</button></span></div>
+<pre id="p-method"></pre>
+  </div>
+
+  <details>
+    <summary>예시 보기</summary>
+<pre># 수업 방식
+- 자유 대화: 자유 대화는 20번 이상 주고받아 주세요. 튜터는 오랫동안 알고 지낸 한국인 친구처럼 대화해 주세요.
+- 문법: 매 수업마다 주제와 관련된 문법을 2개 알려 주세요. 내 수준보다 조금 높은 문법을 예문과 함께 설명해 주세요.
+- 어휘: 매 수업마다 주제와 관련된 단어를 5개 알려 주세요. 뜻과 예문을 함께 알려 주세요.
+- 발음: 자유 대화에서 내가 틀리게 발음한 것을 연습할 수 있는 문장을 3개 주세요. 내가 소리 내어 읽으면 어색한 발음을 알려 주고 고쳐 주세요.
+- 피드백: 대화가 끝나면 ① 잘 말한 표현 3개까지 ② 어색한 표현과 더 자연스러운 표현 3개까지 ③ 꼭 고쳐야 할 오류 3개까지 순서로 피드백해 주세요. 해당하는 것이 없으면 만들지 말고 없다고 말해 주세요.</pre>
+  </details>
+
+  <div class="field">
+    <div class="field-head"><label for="t-method">나의 '# 수업 방식'을 여기에 쓰기</label><button class="copy copy-light" type="button" data-target="t-method">복사</button></div>
+    <textarea id="t-method" spellcheck="false" placeholder="# 수업 방식&#10;- 자유 대화: …&#10;- 피드백: …"></textarea>
+    <p class="muted">'아래 칸에 넣기'를 누른 뒤 여기에서 직접 고쳐도 됩니다.<br>이 칸의 내용도 지금 쓰는 브라우저에만 저장됩니다.<br>활동지에도 써 두세요.</p>
+  </div>
+
+  <div class="check" id="chk-method">
+    <h3>✔ 다음으로 넘어가기 전에 확인하기</h3>
+    <ul>
+      <li data-k="head"><span class="mk">✓</span><span>첫 줄이 <code># 수업 방식</code>입니다.</span></li>
+      <li data-k="acts"><span class="mk">✓</span><span>내 수업 진행 순서에 있는 활동(자유 대화, 문법, 어휘, 발음 중)에 맞추어 썼고, <b>피드백</b>이 들어 있습니다.</span></li>
+      <li data-k="blank"><span class="mk">✓</span><span>채우지 않은 빈칸 <code>[   ]</code>이 없습니다.</span></li>
+      <li data-k="concrete"><label><input type="checkbox" id="cb-concrete"><span>숫자나 예를 넣어 구체적으로 썼습니다.</span></label></li>
+      <li data-k="mine"><label><input type="checkbox" id="cb-mine"><span>내 프롬프트는 예시와 다릅니다.</span></label></li>
+    </ul>
+  </div>
+</section>
+
+<section id="rules">
+  <div class="sec-label">③ 꼭 지켜야 할 것</div>
+  <h2>튜터가 대화할 때 꼭 지켜야 할 것 정하기</h2>
+  <ul>
+    <li>튜터가 대화할 때 <b>어떻게 말하고 반응할지</b> 고릅니다. 체크하면 아래 '# 대화할 때 꼭 지켜야 할 것'에 자동으로 들어갑니다.</li>
+    <li><b>회차 기억은 꼭 넣습니다.</b> 튜터가 새 채팅에서 1회차로 다시 시작하지 않게 합니다. (처음부터 체크되어 있습니다.)</li>
+    <li>②의 '# 수업 방식'에 이미 쓴 내용은 다시 쓰지 않습니다. 같은 지시가 두 번 있으면 튜터가 헷갈릴 수 있습니다.</li>
+    <li><mark style="background:var(--clay-soft);color:var(--clay);font-weight:600;border-radius:4px;padding:0 3px">색칠한 칸</mark>은 나에게 맞게 바꿉니다. "짧게", "적당히"보다 <b>숫자와 예</b>를 넣습니다. (예: "짧게" → "2~3문장으로")</li>
+  </ul>
+  <div class="callout tip"><p><b>1단계의 '# 대화할 때 꼭 지켜야 할 것'은 모두 지워지고 여기서 고른 것으로 바뀝니다.</b><br>1단계 규칙 중 남기고 싶은 것(내 말을 끊지 않기, 틀려도 대화 이어 가기 등)은 '기다리기'와 '대화 중 실수'에서 다시 고르세요.</p></div>
+
+  <h3 style="margin-top:22px">1) 바꾸고 싶은 것 고르기</h3>
+  <div class="mcards" id="rcards"></div>
+
+  <h3 style="margin-top:22px">2) 나의 '# 대화할 때 꼭 지켜야 할 것' 확인하기</h3>
+  <div class="prompt">
+    <div class="prompt-bar"><span>나의 '# 대화할 때 꼭 지켜야 할 것'</span><span style="display:flex;gap:6px"><button class="copy" type="button" data-target="p-rules">복사</button><button class="copy" type="button" id="put-rules">아래 칸에 넣기</button></span></div>
+<pre id="p-rules"></pre>
+  </div>
+
+  <details>
+    <summary>예시 보기</summary>
+<pre># 대화할 때 꼭 지켜야 할 것
+- 회차 기억: 새 채팅을 시작하면 이 프로젝트의 지난 대화를 확인하세요. 내가 마지막으로 마친 회차의 다음 회차로 시작해 주세요.
+- 기다리기: 내가 말을 멈추거나 '음…', '어…'라고 하면 아직 말하는 중이니 끼어들지 말고 기다려 주세요.
+- 응답 언어: 한국어로만 대화해 주세요. 내가 영어로 물어보면 영어로 짧게 대답하고, 다시 한국어로 대화해 주세요.
+- 응답 길이: 대화할 때는 한 번에 2~3문장으로 말해 주세요.</pre>
+  </details>
+
+  <div class="callout tip"><p><b>음성 모드에서 튜터가 끼어드는 것을 완전히 막을 수는 없습니다.</b><br>그래도 '기다리기'를 넣으면 끼어드는 일이 줄어듭니다.</p></div>
+
+  <div class="field">
+    <div class="field-head"><label for="t-rules">나의 '# 대화할 때 꼭 지켜야 할 것'을 여기에 쓰기</label><button class="copy copy-light" type="button" data-target="t-rules">복사</button></div>
+    <textarea id="t-rules" spellcheck="false" placeholder="# 대화할 때 꼭 지켜야 할 것&#10;- 회차 기억: …&#10;- …"></textarea>
+    <p class="muted">'아래 칸에 넣기'를 누른 뒤 여기에서 직접 고쳐도 됩니다.<br>이 칸의 내용도 지금 쓰는 브라우저에만 저장됩니다.<br>활동지에도 써 두세요.</p>
+  </div>
+
+  <div class="check" id="chk-rules">
+    <h3>✔ 다음으로 넘어가기 전에 확인하기</h3>
+    <ul>
+      <li data-k="head"><span class="mk">✓</span><span>첫 줄이 <code># 대화할 때 꼭 지켜야 할 것</code>입니다.</span></li>
+      <li data-k="mem"><span class="mk">✓</span><span><code>- 회차 기억:</code>이 들어 있습니다.</span></li>
+      <li data-k="blank"><span class="mk">✓</span><span>채우지 않은 빈칸 <code>[   ]</code>이 없습니다.</span></li>
+      <li data-k="overlap"><label><input type="checkbox" id="cb-overlap"><span>'# 수업 방식'에 쓴 내용과 겹치지 않습니다.</span></label></li>
+      <li data-k="mine"><label><input type="checkbox" id="cb-mine2"><span>내 프롬프트는 예시와 다릅니다.</span></label></li>
+    </ul>
+  </div>
+</section>
+
+<section id="apply">
+  <div class="sec-label">④ 튜터에 넣고 확인</div>
+  <h2>2단계-2 프롬프트를 튜터에 넣고 확인하기</h2>
+  <ul>
+    <li>①의 2단계-1 프롬프트에서 <code># 수업 방식</code>과 <code># 대화할 때 꼭 지켜야 할 것</code>이 ②와 ③에서 만든 내용으로 <b>자동으로 바뀝니다.</b><br>나머지 네 부분은 그대로입니다.</li>
+    <li>완성된 프롬프트로 지침 <b>전체</b>를 바꿉니다.<br>원래 지침 아래에 덧붙이지 않습니다.<br>같은 제목이 두 개 있으면 튜터가 헷갈립니다.</li>
+    <li>같은 화면에서 <b>어휘·문법 등급 목록 파일</b>도 함께 올립니다. ②의 어휘, 문법, 자유 대화 카드가 이 파일의 등급을 씁니다.</li>
+  </ul>
+  <div class="callout tip"><p><b>먼저 등급 목록 파일을 내려받습니다.</b><br>Google Drive에서 <b>한국어 표준 교육과정 어휘, 문법 등급 목록(2017).xlsx</b>를 내려받아 컴퓨터에 저장해 둡니다.</p></div>
+
+  <h3 style="margin-top:22px">1) 2단계-2 프롬프트 복사하기</h3>
+  <p id="full-status" class="callout tip" style="max-width:none"></p>
+  <div class="prompt">
+    <div class="prompt-bar"><span>2단계-2 튜터 프롬프트 (자동 완성)</span><button class="copy" type="button" data-target="p-full">복사</button></div>
+<pre id="p-full"></pre>
+  </div>
+
+  <h3 style="margin-top:22px">2) 지침 바꾸기</h3>
+  <div class="tabs" role="tablist" aria-label="플랫폼 선택">
+    <button id="tab-gpt" role="tab" aria-selected="true" aria-controls="panel-gpt" type="button">ChatGPT · 프로젝트</button>
+    <button id="tab-gem" role="tab" aria-selected="false" aria-controls="panel-gem" type="button">Gemini · 스킬</button>
+  </div>
+
+  <div id="panel-gpt" role="tabpanel" aria-labelledby="tab-gpt">
+    <ol class="steps">
+      <li class="step noimg"><div class="txt"><div class="num">1</div>
+        <h3>2단계 프로젝트의 지침 열기</h3>
+        <div><p><b>2단계 튜터 프로젝트</b> › <span class="btn-name">⋯</span> › <span class="btn-name">프로젝트 설정</span>을 엽니다.<br>새 프로젝트는 만들지 않습니다.</p></div></div></li>
+      <li class="step noimg"><div class="txt"><div class="num">2</div>
+        <h3>전체를 바꿔 붙여 넣고 저장하기</h3>
+        <div><p><span class="btn-name">지침</span> 칸을 누르고 <kbd>Ctrl</kbd>+<kbd>A</kbd>로 전체를 고른 뒤, 1)에서 복사한 2단계-2 프롬프트를 <kbd>Ctrl</kbd>+<kbd>V</kbd>로 붙여 넣습니다.<br><span class="btn-name">저장</span>을 누릅니다.</p></div></div></li>
+      <li class="step noimg"><div class="txt"><div class="num">3</div>
+        <h3>등급 목록 파일 올리기</h3>
+        <div><p>2단계 프로젝트 화면의 <span class="btn-name">파일 추가</span>를 누르고 내려받은 등급 목록 파일을 올립니다.<br>파일 목록에 파일 이름이 보이면 끝입니다.</p></div></div></li>
+      <li class="step noimg"><div class="txt"><div class="num">4</div>
+        <h3>시범 대화로 확인하기</h3>
+        <div><p>같은 프로젝트 안에서 <b>새 채팅</b>을 열고 "시범 대화예요. 내 커리큘럼을 보여 주세요."라고 써 봅니다.<br>튜터가 <b>3주 1회부터 5주 2회까지 내 주제</b>를 보여 주면 성공입니다.</p>
+        <p>이어서 2~3분 대화해 보고, ②와 ③에서 바꾼 것(예: 어휘 5개, 2~3문장으로 말하기)을 튜터가 지키는지 봅니다.</p></div></div></li>
+    </ol>
+  </div>
+
+  <div id="panel-gem" role="tabpanel" aria-labelledby="tab-gem" hidden>
+    <ol class="steps">
+      <li class="step noimg"><div class="txt"><div class="num">1</div>
+        <h3>2단계 스킬 열기</h3>
+        <div><p>컴퓨터의 gemini.google.com에서 <span class="btn-name">☰</span> › <span class="btn-name">⚙ 설정</span> › <span class="btn-name">스킬</span> › <b>2단계 튜터 스킬</b>을 엽니다.<br>새 스킬은 만들지 않습니다.</p></div></div></li>
+      <li class="step noimg"><div class="txt"><div class="num">2</div>
+        <h3>요청 사항을 바꿔 붙여 넣고 저장하기</h3>
+        <div><p><b>요청 사항</b> 칸을 누르고 <kbd>Ctrl</kbd>+<kbd>A</kbd>로 전체를 고른 뒤, 1)에서 복사한 2단계-2 프롬프트를 <kbd>Ctrl</kbd>+<kbd>V</kbd>로 붙여 넣습니다.<br><span class="btn-name">저장</span>을 누릅니다.<br>이름과 설명은 바꾸지 않습니다.</p></div></div></li>
+      <li class="step noimg"><div class="txt"><div class="num">3</div>
+        <h3>등급 목록 파일 올리기</h3>
+        <div><p>같은 스킬 화면에서 파일을 추가하는 칸에 내려받은 등급 목록 파일을 올리고 <span class="btn-name">저장</span>을 누릅니다.</p></div></div></li>
+      <li class="step noimg"><div class="txt"><div class="num">4</div>
+        <h3>새 채팅에서 /로 불러 확인하기</h3>
+        <div><p>새 채팅에서 <code>/2단계 스킬 이름</code>을 붙여 "시범 대화예요. 내 커리큘럼을 보여 주세요."라고 보냅니다.<br>튜터가 <b>3주 1회부터 5주 2회까지 내 주제</b>를 보여 주면 성공입니다.</p>
+        <p>이어서 2~3분 대화해 보고, ②와 ③에서 바꾼 것을 튜터가 지키는지 봅니다.</p></div></div></li>
+    </ol>
+  </div>
+
+  <div class="callout tip"><p><b>튜터가 지난 회차를 기억하지 못할 수도 있습니다.</b><br>그래서 앞으로도 대화를 시작할 때는 "3주 2회 수업을 시작해요."처럼 <b>몇 주 몇 회인지 꼭 먼저 말합니다.</b></p>
+  <p>수업 시간에 한 시범 대화는 주 2회 과제에 포함되지 않습니다.</p></div>
+
+  <div class="check" id="chk-apply">
+    <h3>✔ 다음으로 넘어가기 전에 확인하기</h3>
+    <ul>
+      <li data-k="once"><span class="mk">✓</span><span>2단계-2 프롬프트에 <code># 수업 방식</code>과 <code># 대화할 때 꼭 지켜야 할 것</code>이 <b>하나씩만</b> 있습니다.</span></li>
+      <li data-k="blank"><span class="mk">✓</span><span>2단계-2 프롬프트에 채우지 않은 빈칸 <code>[   ]</code>이 남아 있지 않습니다.</span></li>
+      <li data-k="saved"><label><input type="checkbox" id="cb-saved"><span>지침(요청 사항) 전체를 2단계-2 프롬프트로 바꾸고 저장했습니다.</span></label></li>
+      <li data-k="file"><label><input type="checkbox" id="cb-file"><span>2단계 튜터(프로젝트 또는 스킬)에 등급 목록 파일을 올렸습니다.</span></label></li>
+      <li data-k="test"><label><input type="checkbox" id="cb-test"><span>시범 대화에서 튜터가 내 커리큘럼을 보여 주었고, 바꾼 것을 지켰습니다.</span></label></li>
+    </ul>
+  </div>
+</section>
+
+<section id="next">
+  <div class="sec-label">⑤ 다음 시간까지</div>
+  <h2>2단계-2 튜터와 대화하기</h2>
+  <div class="tbl sched"><table>
+    <thead><tr><th>회차</th><th>언제</th></tr></thead>
+    <tbody>
+      <tr><td>3주 1회 · 3주 2회</td><td>수업 10주차</td></tr>
+      <tr><td>4주 1회 · 4주 2회</td><td>수업 11주차</td></tr>
+      <tr><td>5주 1회 · 5주 2회</td><td>수업 12주차</td></tr>
+    </tbody>
+  </table></div>
+  <ul>
+    <li>앞으로는 <b>2단계-2 튜터</b>(오늘 지침을 바꾼 2단계 프로젝트, Gemini는 <code>/2단계 스킬 이름</code>)와 대화합니다.</li>
+    <li>한 번에 10~15분, 일주일에 2번 대화합니다.<br>대화를 시작할 때 몇 주 몇 회인지 먼저 말합니다.</li>
+    <li>대화가 끝나면 채팅의 <b>공개 링크</b>를 만들어 '챗봇 대화 기록' 문서에 붙여 넣고, 좋았던 점과 바꾸고 싶은 점을 씁니다.<br>링크 만드는 방법은 <a href="https://jungmkmk99.github.io/Korean-with-AI-2026/chatbot-1/#submit">챗봇 만들기 (1) ④ 기록 제출</a>을 보세요.</li>
+  </ul>
+  <div class="next-class hw">
+    <div class="nc-label">과제</div>
+    <p>다음 수업 전까지 아래 세 가지를 합니다.</p>
+    <div class="nc-items"><span>2회 활동지 LMS에 제출</span><span>3주 2회 · 4주 1회 대화</span><span>'챗봇 대화 기록'에 링크와 느낀 점 기록</span></div>
+  </div>
+</section>
+</main>
+</div>
+<footer><div class="wrap">2026-2 AI로배우는한국어 · 2단계 챗봇 제작 (2) 나에게 맞는 튜터로 업그레이드하기 · 화면과 버튼 이름은 2026년 11월 기준이며, 서비스 업데이트에 따라 달라질 수 있음.</div></footer>
+
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  function store(k,v){try{if(v===undefined)return localStorage.getItem('cb3v2-'+k);localStorage.setItem('cb3v2-'+k,v)}catch(e){return null}}
+  const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+  // activities (same names as chatbot (2)); re = how to find them in a '# 수업 진행 순서' line
+  const CATS=[
+    {id:'free',name:'자유 대화',re:/자유\s*대화/},
+    {id:'voc',name:'어휘',re:/어휘|단어/},
+    {id:'gram',name:'문법',re:/문법/},
+    {id:'read',name:'읽기',re:/읽기/},
+    {id:'sample',name:'샘플 대화',re:/샘플|예시\s*대화/},
+    {id:'shadow',name:'따라 말하기',re:/따라\s*말하기|쉐도잉|섀도잉/},
+    {id:'role',name:'역할 연습',re:/역할/},
+    {id:'pron',name:'발음',re:/발음/},
+    {id:'quiz',name:'퀴즈',re:/퀴즈/},
+    {id:'fb',name:'피드백',re:/피드백/},
+    {id:'sum',name:'학습 요약',re:/요약/},
+    {id:'rep',name:'학습 리포트',re:/리포트|보고서/}
+  ];
+  const byId=Object.fromEntries(CATS.map(c=>[c.id,c]));
+  // v2: only these activities get a '# 수업 방식' card (other activities keep their 수업 진행 순서 line)
+  const EDIT=['free','gram','voc','pron','fb'];
+  const EDIT_CATS=CATS.filter(c=>EDIT.includes(c.id));
+
+  // '# 수업 방식' choices. [ ] = a blank the learner can change.
+  const OPTS={
+    free:[
+      ['주고받는 횟수','자유 대화는 [20]번 이상 주고받아 주세요.'],
+      ['대화 난이도','튜터는 등급 목록 파일의 [@grade] 어휘, [@grade] 문법을 적절히 섞어서 i+1 수준으로 이해와 학습이 가능하게 말해 주세요.'],
+      ['대화 스타일','튜터는 [오랫동안 알고 지낸 한국인 친구]처럼 자연스럽게 대화해 주세요. 앞에서 한 질문은 다시 하지 마세요.'],
+      ['내가 더 많이 말하기','내가 튜터보다 더 많이 말할 수 있도록 질문해 주세요.'],
+      ['이유와 경험 묻기','내 대답에 이유나 경험을 구체적으로 물어봐 주세요.'],
+      ['나도 질문하게 하기','내가 [3]번 동안 질문하지 않으면 나에게도 질문해 보라고 해 주세요.'],
+      ['내가 막혔을 때','내가 대답하지 못하고 막히면 [힌트나 비슷한 예시 답]을 주세요.']
+    ],
+    voc:[
+      ['어휘 개수와 수준','매 수업마다 주제와 관련된 단어를 등급 목록 파일의 \'어휘\' 시트에서 [@grade] 단어로 [5]개 골라 주세요. 뜻과 예문을 함께 알려 주세요.'],
+      ['함께 알려 줄 것','단어마다 [비슷한 말, 반대말]도 알려 주세요.'],
+      ['자주 같이 쓰는 말','단어와 자주 같이 쓰는 말을 알려 주세요. (예: 결정을 내리다)']
+    ],
+    gram:[
+      ['문법 개수와 수준','매 수업마다 주제와 관련된 문법을 등급 목록 파일의 \'문법\' 시트에서 [@grade] 문법으로 [2]개 골라 주세요.'],
+      ['예문','문법마다 예문을 [2]개씩 보여 주세요.'],
+      ['비교 설명','헷갈리기 쉬운 비슷한 문법과 비교해서 설명해 주세요.'],
+      ['주의할 점','학습자가 자주 하는 실수와 주의할 점을 알려 주세요.'],
+      ['연습 방법','[빈칸 채우기와 문장 만들기]로 연습하게 해 주세요.']
+    ],
+    read:[
+      ['글의 길이','읽기 글은 [5~6]문장 정도로 써 주세요.'],
+      ['글의 종류','읽기 글은 [신문 기사나 칼럼]처럼 써 주세요.'],
+      ['문제','읽기 문제는 [TOPIK 읽기] 형식으로 [2]개 내 주세요.'],
+      ['정답 설명','내가 답하면 정답과 그 이유를 알려 주세요.']
+    ],
+    sample:[
+      ['대화의 길이','샘플 대화는 [6]번 정도 주고받는 대화로 만들어 주세요.'],
+      ['대화 상황','샘플 대화는 [대학 생활] 상황으로 만들어 주세요.'],
+      ['표시하기','샘플 대화에서 오늘의 어휘와 문법은 굵게 표시해 주세요.']
+    ],
+    shadow:[
+      ['문장 수','따라 말할 문장을 [3]개 주세요.'],
+      ['하는 방법','한 문장씩 읽어 주고, 내가 따라 말하면 다음 문장으로 넘어가 주세요.'],
+      ['속도','문장은 [보통 속도]로 읽어 주세요.']
+    ],
+    role:[
+      ['역할 정하기','역할 연습을 하기 전에 내가 어떤 역할을 할지 물어봐 주세요.'],
+      ['역할 바꾸기','한 번 끝나면 역할을 바꿔서 한 번 더 해 주세요.'],
+      ['내가 막혔을 때','내가 막히면 샘플 대화의 문장을 힌트로 주세요.']
+    ],
+    pron:[
+      ['틀린 발음 연습','자유 대화에서 내가 틀리게 발음한 것을 연습할 수 있는 문장을 [3]개 주세요. 내가 소리 내어 읽으면 어색한 발음을 알려 주고 고쳐 주세요.'],
+      ['특별히 연습할 발음','[받침 발음]을 특별히 연습하게 해 주세요.'],
+      ['문장의 길이','연습 문장은 [짧은 한 문장]으로 해 주세요.'],
+      ['속도','연습 문장은 [천천히] 읽어 주세요.']
+    ],
+    quiz:[
+      ['문제 수와 형식','퀴즈는 [객관식] 문제로 [5]개 내 주세요.'],
+      ['하나씩 풀기','문제는 한 번에 하나씩 내고, 내가 답하면 정답을 알려 주세요.'],
+      ['틀린 문제','틀린 문제는 비슷한 문제로 한 번 더 내 주세요.']
+    ],
+    fb:[
+      ['피드백 시점','피드백은 [대화가 모두 끝난 뒤에] 해 주세요.'],
+      ['피드백 순서','① 잘 말한 표현 [3]개까지 ② 어색한 표현과 더 자연스러운 표현 [3]개까지 ③ 꼭 고쳐야 할 오류 [3]개까지 순서로 피드백해 주세요.'],
+      ['피드백 양','피드백은 [가장 중요한 것 3개]만 해 주세요.'],
+      ['피드백 범위','피드백은 [문법과 어휘]를 중심으로 해 주세요.'],
+      ['틀린 이유','왜 틀렸는지 이유를 짧게 설명해 주세요.'],
+      ['더 좋은 표현','더 자연스럽거나 수준 높은 표현을 제안해 주세요.'],
+      ['고치는 방법','틀린 것은 [힌트를 주어 내가 직접 고치게] 해 주세요.'],
+      ['칭찬하는 정도','피드백은 [따뜻하게 격려하면서] 해 주세요.'],
+      ['보여 주는 방법','피드백은 [표]로 보여 주세요.']
+    ],
+    sum:[
+      ['요약할 내용','오늘 배운 [어휘, 문법, 잘한 표현]을 정리해 주세요.'],
+      ['요약 형식','요약은 [표]로 짧게 보여 주세요.'],
+      ['복습','다음 회차를 시작할 때 지난 회차 요약을 짧게 복습해 주세요.']
+    ],
+    rep:[
+      ['리포트 시점','학습 리포트는 [5주 2회]가 끝난 뒤에 해 주세요.'],
+      ['리포트 내용','지금까지의 대화를 바탕으로 [나의 발전, 자주 하는 실수, 앞으로 공부할 것]을 정리해 주세요.']
+    ]
+  };
+
+  // ---------- ① read the 2단계-1 prompt ----------
+  const HEADS=[['역할',/^역할/],['사용자 정보',/^사용자\s*정보/],['대화 주제',/^대화\s*주제/],['수업 진행 순서',/^수업\s*진행\s*순서/],['수업 방식',/^수업\s*방식/],['대화할 때 꼭 지켜야 할 것',/^대화할\s*때/]];
+  function parse(base){
+    const lines=base.replace(/\r/g,'').split('\n');
+    const heads=[];
+    lines.forEach((l,i)=>{const m=l.match(/^\s*#(?!#)\s*(.+?)\s*#?\s*$/);if(m)heads.push({i,t:m[1]})});
+    const count=HEADS.map(([n,re])=>({n,c:heads.filter(h=>re.test(h.t)).length}));
+    const oh=heads.find(h=>/^수업\s*진행\s*순서/.test(h.t));
+    let acts=[];
+    if(oh){
+      const nx=heads.find(h=>h.i>oh.i);
+      let sec=lines.slice(oh.i+1,nx?nx.i:lines.length);
+      const stop=sec.findIndex(l=>/^\s*진행\s*규칙/.test(l));
+      if(stop>=0)sec=sec.slice(0,stop);
+      sec=sec.map(l=>l.trim()).filter(l=>l&&!/^#/.test(l)&&!/^매\s*회차/.test(l));
+      if(sec.some(l=>/^[-•*]/.test(l)))sec=sec.filter(l=>/^[-•*]/.test(l));
+      acts=sec.filter(l=>!/몇\s*주|시간이\s*충분/.test(l))
+        .map(l=>l.replace(/^([-•*]|\d+[.)])\s*/,'').replace(/\s*\((꼭|시간이?\s*있으면)\)\s*/g,' ').trim())
+        .filter(Boolean)
+        .map(t=>({t,cats:CATS.filter(c=>c.re.test(t)).map(c=>c.id)}));
+    }
+    const lang=(base.match(/모어\s*[:：]\s*([^\n]+)/)||[])[1]||'';
+    return {count,acts,found:!!oh,lang:lang.trim()};
+  }
+
+  let info={count:[],acts:[],found:false,lang:''};
+  let sel=[]; // activity ids used in ②, in my order
+  function detected(){
+    const ids=[];info.acts.forEach(a=>a.cats.forEach(id=>{if(EDIT.includes(id)&&!ids.includes(id))ids.push(id)}));
+    return ids;
+  }
+  function withFb(ids){ids=ids.filter(x=>x!=='fb');ids.push('fb');return ids}
+
+  function renderFound(){
+    const box=$('found-list');
+    if(!$('t-base').value.trim()){box.innerHTML='<p class="empty">위 칸에 프롬프트를 붙여 넣으면 여기에 나옵니다.</p>';$('found-cats').hidden=true;return}
+    if(!info.found){box.innerHTML='<p class="empty">"# 수업 진행 순서" 줄을 찾지 못했습니다. 2단계 튜터의 지침 전체를 다시 복사해서 붙여 넣으세요.</p>';$('found-cats').hidden=true;return}
+    if(!info.acts.length){box.innerHTML='<p class="empty">"# 수업 진행 순서"에서 활동을 찾지 못했습니다. 아래에서 내 활동을 직접 고르세요.</p>'}
+    else box.innerHTML='<ol>'+info.acts.map(a=>'<li>'+esc(a.t)+a.cats.map(id=>'<span class="chip'+(EDIT.includes(id)?'':' opt')+'">'+esc(byId[id].name)+'</span>').join('')+'</li>').join('')+'</ol>';
+    $('found-cats').hidden=false;
+    $('catpick').innerHTML=EDIT_CATS.map(c=>{const on=sel.includes(c.id);const fixed=c.id==='fb';return '<label class="'+(on?'on':'')+'"><input type="checkbox" data-cat="'+c.id+'"'+(on?' checked':'')+(fixed?' disabled':'')+'>'+esc(c.name)+(fixed?' (항상)':'')+'</label>'}).join('');
+  }
+  $('catpick').addEventListener('change',e=>{
+    const id=e.target.dataset.cat;if(!id)return;
+    if(e.target.checked){if(!sel.includes(id))sel.push(id)}else sel=sel.filter(x=>x!==id);
+    // keep my order: detected first, then others in table order
+    const det=detected();sel=withFb([...det.filter(x=>sel.includes(x)),...EDIT.filter(x=>sel.includes(x)&&!det.includes(x))]);
+    store('sel',JSON.stringify(sel));renderFound();renderCards();update();
+  });
+
+  // ---------- ③ choices for '# 대화할 때 꼭 지켜야 할 것'. [@lang] = my 모어 from '# 사용자 정보' ----------
+  const RULES=[
+    {id:'mem',name:'회차 기억',badge:'꼭 넣기',opts:[
+      ['시작할 때 회차 확인','새 채팅을 시작하면 이 프로젝트의 지난 대화를 확인하세요. 내가 마지막으로 마친 회차의 다음 회차로 시작해 주세요.'],
+      ['지난 회차를 확인하지 못할 때','지난 대화를 확인할 수 없으면 1회차로 시작하지 말고, 오늘이 몇 주 몇 회인지 나에게 물어보세요.'],
+      ['끝날 때 회차 기록하기','대화가 끝나면 오늘 마친 회차를 말해 주세요. (예: 오늘은 3주 2회를 마쳤어요.)']]},
+    {id:'wait',name:'기다리기',opts:[
+      ['말을 멈추었을 때',"내가 말을 멈추거나 '음…', '어…'라고 하면 아직 말하는 중이니 끼어들지 말고 기다려 주세요."],
+      ['생각할 시간 주기','대답이 늦어도 재촉하지 말고 끝까지 기다려 주세요.'],
+      ['말 끊지 않기','내 말을 끊지 마세요.']]},
+    {id:'err',name:'대화 중 실수',opts:[
+      ['틀려도 이어 가기','내가 틀리게 말해도 뜻을 알 수 있으면 대화를 이어 가세요.'],
+      ['뜻을 모를 때',"뜻을 전혀 알 수 없을 때만 '○○는 무슨 뜻이에요?'라고 물어보세요."],
+      ['기억했다가 말하기','내가 틀린 어휘, 문법, 표현은 기억해 두었다가 피드백 때 말해 주세요.']]},
+    {id:'lang',name:'응답 언어',opts:[
+      ['기본 언어','한국어로만 대화해 주세요.'],
+      ['모어로 물어볼 때','내가 [@lang]로 물어보면 [@lang]로 짧게 대답하고, 다시 한국어로 대화해 주세요.'],
+      ['설명 언어','내가 이해하기 어렵다고 하면 한국어와 [@lang]로 같이 설명해 주세요.']]},
+    {id:'len',name:'응답 길이',opts:[
+      ['대화할 때','대화할 때는 한 번에 [2~3]문장으로 말해 주세요.'],
+      ['설명할 때','어휘나 문법을 설명할 때는 [5]문장 이내로 설명해 주세요.']]},
+    {id:'tone',name:'말투',opts:[
+      ['존댓말 / 반말','[편한 존댓말(해요체)]로 말해 주세요.'],
+      ['격식체 / 비격식체','[비격식체]로 말해 주세요. (격식체: -습니다/-ㅂ니다, 비격식체: -아요/-어요)'],
+      ['말하는 분위기','[밝고 친절하게] 말해 주세요.']]},
+    {id:'end',name:'끝내는 말',opts:[
+      ['수업을 끝낼 때',"내가 '[오늘은 여기까지]'라고 하면 남은 활동은 건너뛰고 피드백을 해 주세요."],
+      ['자유 대화를 끝낼 때',"자유 대화는 내가 '[다음 단계로]'라고 할 때까지 계속해 주세요."]]}
+  ];
+  const lang=()=>info.lang||'영어';
+  // [@lang] blanks start empty: the learner writes the language
+  const defOf=d=>(d==='@lang'||d==='@grade')?'':d;
+
+  // shared card maker for ② and ③
+  function makeCards(cfg){
+    const S={picked:{},vals:{},own:{}};
+    try{['picked','vals','own'].forEach(k=>{const v=store(cfg.prefix+k);if(v)S[k]=JSON.parse(v)})}catch(e){}
+    if(store(cfg.prefix+'picked')===null&&cfg.defaults)cfg.defaults.forEach(k=>S.picked[k]=true);
+    const save=()=>['picked','vals','own'].forEach(k=>store(cfg.prefix+k,JSON.stringify(S[k])));
+    const fill=(key,tpl)=>{let i=0;return tpl.replace(/\[([^\]]*)\]/g,(_,d)=>{const v=S.vals[key+'_'+(i++)];const r=(v===undefined||v.trim()==='')?defOf(d):v.trim();return r===''?'[   ]':r})};
+    const wrap=$(cfg.wrap);
+    function build(){
+      const lines=[cfg.head];
+      cfg.groups().forEach(g=>{
+        const parts=g.opts.map((o,k)=>S.picked[g.id+'-'+k]?fill(g.id+'-'+k,o[1]):null).filter(Boolean);
+        const o=(S.own[g.id]||'').trim();if(o)parts.push(o);
+        if(parts.length)lines.push('- '+g.name+': '+parts.join(' '));
+      });
+      $(cfg.out).textContent=lines.length>1?lines.join('\n'):cfg.head+'\n(위 카드에서 고르면 여기에 나옵니다)';
+      if(cfg.onBuild)cfg.onBuild();
+    }
+    function render(){
+      wrap.innerHTML=cfg.groups().map(g=>'<div class="mcard"><div class="mcard-head">'+esc(g.name)+(g.badge?'<span class="chip">'+esc(g.badge)+'</span>':'')+'</div><ul>'+
+        g.opts.map((o,k)=>{const key=g.id+'-'+k;let i=0;
+          const ex=esc(o[1]).replace(/\[([^\]]*)\]/g,(_,d)=>{const j=i++;const v=S.vals[key+'_'+j];const val=v===undefined?defOf(d):v;return '<input class="fill" type="text" data-key="'+key+'_'+j+'" value="'+esc(val)+'" size="'+(val===''?6:Math.max(2,[...val].length+1))+'"'+(d==='@lang'?' placeholder="언어"':d==='@grade'?' placeholder="○급"':'')+' aria-label="'+esc(o[0])+' 바꿀 말">'});
+          return '<li class="'+(S.picked[key]?'on':'')+'"><label><input type="checkbox" data-pick="'+key+'"'+(S.picked[key]?' checked':'')+'><span class="what">'+esc(o[0])+'</span><span class="ex">'+ex+'</span></label></li>'}).join('')+
+        '</ul><div class="own"><b>직접 쓰기</b><input type="text" data-own="'+g.id+'" value="'+esc(S.own[g.id]||'')+'" placeholder="원하는 것이 없으면 여기에 씁니다."></div></div>').join('');
+      build();
+    }
+    wrap.addEventListener('change',e=>{
+      const k=e.target.dataset.pick;if(!k)return;
+      S.picked[k]=e.target.checked;e.target.closest('li').classList.toggle('on',e.target.checked);save();build();
+    });
+    wrap.addEventListener('input',e=>{
+      const t=e.target;
+      if(t.dataset.key){S.vals[t.dataset.key]=t.value;t.size=t.value===''?6:Math.max(2,[...t.value].length+1);
+        // typing in a blank also picks that line
+        const k=t.dataset.key.replace(/_\d+$/,'');if(!S.picked[k]){S.picked[k]=true;t.closest('li').querySelector('input[type=checkbox]').checked=true;t.closest('li').classList.add('on')}}
+      else if(t.dataset.own)S.own[t.dataset.own]=t.value;
+      else return;
+      save();build();
+    });
+    // a click on a blank should not toggle the checkbox
+    wrap.addEventListener('click',e=>{if(e.target.classList.contains('fill'))e.preventDefault()});
+    $(cfg.put).addEventListener('click',()=>{const ta=$(cfg.ta);ta.value=$(cfg.out).textContent;store(cfg.ta,ta.value);update();const b=$(cfg.put);b.textContent='넣었습니다';setTimeout(()=>b.textContent='아래 칸에 넣기',1800)});
+    return {render};
+  }
+
+  const methodCards=makeCards({prefix:'m-',wrap:'mcards',out:'p-method',put:'put-method',ta:'t-method',head:'# 수업 방식',
+    groups:()=>$('t-base').value.trim()?sel.map(id=>({id,name:byId[id].name,badge:id==='fb'?'모든 대화에 들어감':'',opts:OPTS[id]})):[]});
+  const rulesCards=makeCards({prefix:'r-',wrap:'rcards',out:'p-rules',put:'put-rules',ta:'t-rules',head:'# 대화할 때 꼭 지켜야 할 것',
+    groups:()=>RULES,defaults:['mem-0','mem-1']});
+  function renderCards(){$('mcards-empty').hidden=!!sel.length&&!!$('t-base').value.trim();methodCards.render()}
+
+  // ---------- ④ 2단계-2 = 2단계-1 with '# 수업 방식' and '# 대화할 때 꼭 지켜야 할 것' replaced ----------
+  function buildFull(){
+    const base=$('t-base').value.replace(/\r/g,'').trim();
+    const m=$('t-method').value.replace(/\r/g,'').trim(), r=$('t-rules').value.replace(/\r/g,'').trim();
+    const st=$('full-status');
+    if(!base){st.textContent='①의 칸에 2단계-1 프롬프트를 붙여 넣으면 여기에 2단계-2 프롬프트가 완성됩니다.';$('p-full').textContent='(①에 2단계-1 프롬프트를 붙여 넣으면 수정한 프롬프트가 여기에 나옵니다)';return ''}
+    const lines=base.split('\n');const out=[];let skip=false,putM=false,putR=false;
+    lines.forEach(l=>{
+      const h=l.match(/^\s*#(?!#)\s*(.+?)\s*#?\s*$/);
+      if(h){
+        if(/^수업\s*방식/.test(h[1])){skip=true;if(!putM&&m){out.push(m,'');putM=true}else if(!m){skip=false;out.push(l)}return}
+        if(/^대화할\s*때/.test(h[1])){skip=true;if(!putR&&r){out.push(r,'');putR=true}else if(!r){skip=false;out.push(l)}return}
+        skip=false;
+      }
+      if(!skip)out.push(l);
+    });
+    if(m&&!putM)out.push('',m);
+    if(r&&!putR)out.push('',r);
+    const full=out.join('\n').replace(/\n{3,}/g,'\n\n').trim();
+    $('p-full').textContent=full;
+    const todo=[!m&&'②의 \'# 수업 방식\'',!r&&'③의 \'# 대화할 때 꼭 지켜야 할 것\''].filter(Boolean);
+    st.textContent=todo.length?todo.join('과 ')+' 칸이 비어 있습니다. 칸을 채우면 그 부분이 바뀝니다. (지금은 2단계-1 그대로입니다.)':'✓ 2단계-1 프롬프트에서 # 수업 방식과 # 대화할 때 꼭 지켜야 할 것을 바꿨습니다. 아래 프롬프트를 복사하세요.';
+    return full;
+  }
+
+  // ---------- copy buttons ----------
+  document.querySelectorAll('.copy[data-target]').forEach(b=>{
+    b.addEventListener('click',()=>{
+      const el=$(b.dataset.target);const text=el.tagName==='TEXTAREA'?el.value:el.innerText;
+      const done=()=>{b.textContent='복사됨';setTimeout(()=>b.textContent='복사',1800)};
+      const fallback=()=>{if(el.tagName==='TEXTAREA'){el.focus();el.select()}else{const r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r)}b.textContent='선택됨 · Ctrl+C';setTimeout(()=>b.textContent='복사',2500)};
+      try{navigator.clipboard.writeText(text).then(done,fallback)}catch(e){fallback()}
+    });
+  });
+
+  // ---------- checks ----------
+  function setOk(box,key,ok){const li=document.querySelector('#'+box+' li[data-k="'+key+'"]');if(li)li.classList.toggle('ok',!!ok)}
+  function update(){
+    const base=$('t-base').value.trim();
+    const miss=info.count.filter(x=>x.c===0).map(x=>x.n), dup=info.count.filter(x=>x.c>1).map(x=>x.n);
+    setOk('chk-bring','heads',base&&!miss.length&&!dup.length);
+    $('heads-msg').textContent=!base||(!miss.length&&!dup.length)?'# 제목 6개(역할, 사용자 정보, 대화 주제, 수업 진행 순서, 수업 방식, 대화할 때 꼭 지켜야 할 것)가 하나씩 있습니다.':
+      ('# 제목 6개가 하나씩 있어야 합니다.'+(miss.length?' 없는 것: '+miss.join(', ')+'.':'')+(dup.length?' 두 번 이상 있는 것: '+dup.join(', ')+'.':''));
+    setOk('chk-bring','acts',info.acts.length>0);
+    setOk('chk-bring','same',$('cb-same').checked);
+    const m=$('t-method').value.trim();
+    setOk('chk-method','head',/^#\s*수업\s*방식/.test(m.split('\n')[0]||''));
+    const has=id=>new RegExp('^\\s*-\\s*'+byId[id].name.replace(/\s/g,'\\s*')+'\\s*[:：]','m').test(m);
+    const others=sel.filter(id=>id!=='fb');
+    setOk('chk-method','acts',m&&has('fb')&&(!others.length||others.some(has)));
+    const noBlank=x=>!!x&&!/\[\s*\]/.test(x);
+    setOk('chk-method','blank',noBlank(m));
+    setOk('chk-method','concrete',$('cb-concrete').checked);
+    setOk('chk-method','mine',$('cb-mine').checked);
+    const r=$('t-rules').value.trim();
+    setOk('chk-rules','head',/^#\s*대화할\s*때/.test(r.split('\n')[0]||''));
+    setOk('chk-rules','mem',/^\s*-\s*회차\s*기억\s*[:：]/m.test(r));
+    setOk('chk-rules','blank',noBlank(r));
+    setOk('chk-rules','overlap',$('cb-overlap').checked);
+    setOk('chk-rules','mine',$('cb-mine2').checked);
+    const full=buildFull();
+    const cnt=re=>(full.match(re)||[]).length;
+    setOk('chk-apply','once',m&&r&&cnt(/^\s*#(?!#)\s*수업\s*방식/gm)===1&&cnt(/^\s*#(?!#)\s*대화할\s*때/gm)===1);
+    setOk('chk-apply','blank',!!base&&noBlank(full));
+    setOk('chk-apply','saved',$('cb-saved').checked);
+    setOk('chk-apply','file',$('cb-file').checked);
+    setOk('chk-apply','test',$('cb-test').checked);
+  }
+
+  // platform tabs (shares the choice with chatbot (1) and (2))
+  // two tab pairs (④ and ⑤) always show the same platform
+  const PAIRS=[['tab-gpt','tab-gem']].map(p=>p.map($));
+  function choose(plat){PAIRS.forEach(p=>p.forEach((x,k)=>{const on=(k===1)===(plat==='gem');x.setAttribute('aria-selected',on);x.tabIndex=on?0:-1;$(x.getAttribute('aria-controls')).hidden=!on}))}
+  PAIRS.forEach(p=>p.forEach((t,i)=>{
+    const plat=i===1?'gem':'gpt';
+    t.addEventListener('click',()=>{choose(plat);try{localStorage.setItem('tutor-platform',plat)}catch(e){}});
+    t.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();const n=p[(i+1)%2];n.focus();n.click()}});
+  }));
+  let pref=null;try{pref=localStorage.getItem('tutor-platform')}catch(e){}
+  if(location.hash==='#gemini')pref='gem';
+  if(pref==='gem')choose('gem');
+
+  // ---------- load & wire ----------
+  function readBase(fromInput){
+    info=parse($('t-base').value);
+    let saved=null;try{saved=JSON.parse(store('sel')||'null')}catch(e){}
+    sel=(!fromInput&&Array.isArray(saved))?withFb(saved.filter(x=>EDIT.includes(x))):withFb(detected());
+    if(fromInput)store('sel',JSON.stringify(sel));
+    renderFound();renderCards();rulesCards.render();update();
+  }
+  ['t-base','t-method','t-rules'].forEach(id=>{const a=$(id);const v=store(id);if(v!==null)a.value=v;
+    a.addEventListener('input',()=>{store(id,a.value);if(id==='t-base')readBase(true);else update()})});
+  ['cb-same','cb-concrete','cb-mine','cb-overlap','cb-mine2','cb-saved','cb-test','cb-file'].forEach(id=>{const c=$(id);c.checked=store(id)==='1';c.addEventListener('change',()=>{store(id,c.checked?'1':'0');update()})});
+  readBase(false);
+
+  // menu highlight
+  const links=[...document.querySelectorAll('nav.menu a')];
+  const secs=links.map(a=>document.querySelector(a.getAttribute('href')));
+  function mark(){let cur=0;const y=window.scrollY+120;secs.forEach((s,i)=>{if(s&&s.offsetTop<=y)cur=i});links.forEach((a,i)=>a.classList.toggle('on',i===cur))}
+  addEventListener('scroll',mark,{passive:true});mark();
+})();
+</script>
+
+</body>
+</html>
