@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI로 영상 만들기 2차시 · 고려대학교 유학생 캐릭터</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* 이전 매뉴얼(챗봇 1~3)과 같은 디자인: 베이지 종이, 세리프 제목, 어두운 메뉴, 주황(clay) 강조 */
+:root{
+  --paper:#F7F4EE; --card:#FFFDF9; --ink:#22201C; --muted:#6B655C; --line:#E4DED3;
+  --night:#2B2925; --night-fg:#F5F1EA; --night-soft:#3C3934;
+  --clay:#C96442; --clay-soft:#F3E3DA; --note:#DDE1CD; --note-ink:#3E4A2C;
+  --brown:#8B5E3C; --flow-tint:#D8C6A6; --pick:#FFF3C4;
+  --f-display:"Noto Serif KR","Nanum Myeongjo",Georgia,serif;
+  --f-body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --accent:var(--clay); --accent-ink:#fff; --accent-soft:var(--clay-soft);
+  --serif:var(--f-display); --sans:var(--f-body);
+}
+@media (prefers-color-scheme:dark){:root{
+  --paper:#1E1D1A; --card:#272522; --ink:#ECE7DF; --muted:#A8A196; --line:#3A3733;
+  --night:#121110; --night-fg:#F5F1EA; --night-soft:#2E2C28;
+  --clay:#E08A68; --clay-soft:#3A2A22; --note:#363F2A; --note-ink:#CFDAB8;
+  --brown:#C29A72; --flow-tint:#8A7656; --pick:#4A4128; color-scheme:dark}}
+
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:24px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.75;word-break:keep-all;overflow-wrap:break-word}
+img{max-width:100%}
+a{color:var(--clay);text-underline-offset:3px}
+:focus-visible{outline:2px solid var(--clay);outline-offset:2px;border-radius:6px}
+strong,b{font-weight:700}
+p{margin:0 0 12px;max-width:68ch}
+
+/* 전체 틀: 왼쪽 어두운 메뉴 + 오른쪽 본문 */
+.layout{display:grid;grid-template-columns:230px minmax(0,1fr);gap:40px;max-width:1260px;margin:0 auto;padding-inline:24px}
+aside{position:sticky;top:24px;align-self:start;margin-top:56px;background:var(--night);color:var(--night-fg);border-radius:14px;padding:10px;max-height:calc(100vh - 48px);overflow-y:auto}
+.brand,.brand-sub{display:none}
+nav ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+nav a{display:flex;gap:10px;align-items:center;padding:8px 12px;border-radius:10px;color:var(--night-fg);text-decoration:none;font-size:14px;font-weight:500;opacity:.82}
+nav a:hover,nav a:focus-visible{background:var(--night-soft);opacity:1;outline:none}
+nav a.active{background:var(--night-fg);color:var(--night);opacity:1}
+.dot{width:22px;height:22px;border-radius:50%;border:1.5px solid currentColor;display:grid;place-items:center;font-size:12px;font-weight:700;flex:none;opacity:.8}
+nav a.done .dot{background:var(--clay);border-color:var(--clay);color:#fff;opacity:1}
+.progress{margin:12px 12px 6px;font-size:13px;color:var(--night-fg);opacity:.85}
+.bar{height:6px;background:var(--night-soft);border-radius:3px;margin-top:6px;overflow:hidden}
+.bar span{display:block;height:100%;width:0;background:var(--clay);transition:width .3s}
+
+main{padding:0 0 96px;min-width:0}
+.wrap{max-width:980px}
+
+/* 머리말 */
+.hero{padding-block:56px 12px}
+.kicker{font-size:13px;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.hero h1{font-family:var(--f-display);font-weight:700;font-size:clamp(30px,5vw,44px);line-height:1.25;margin:10px 0 14px;text-wrap:balance}
+.hero h1 em{font-style:normal;color:var(--clay)}
+
+/* 오늘 수업의 흐름 */
+.flow-box{margin:22px 0 8px;padding:18px 20px 20px;background:var(--card);border:2px solid var(--brown);border-radius:16px;box-shadow:0 6px 0 -1px color-mix(in srgb,var(--brown) 35%,transparent),0 16px 30px -14px rgba(60,35,15,.45)}
+.flow-box h3{margin:0 0 4px;color:var(--brown);font-size:19px}
+.flow{list-style:none;margin:12px 0 0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:22px}
+.flow li{position:relative;min-width:0}
+.flow li+li::before{content:"";position:absolute;left:-17px;top:50%;width:12px;height:12px;border-top:3px solid var(--clay);border-right:3px solid var(--clay);transform:translateY(-50%) rotate(45deg)}
+.flow a{display:flex;flex-direction:column;gap:4px;height:100%;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 14px 12px;color:var(--ink);text-decoration:none;transition:border-color .15s}
+.flow a:hover,.flow a:focus-visible{border-color:var(--clay);outline:none}
+.flow li:nth-child(1) a{background:color-mix(in srgb,var(--flow-tint) 10%,var(--card));border-color:color-mix(in srgb,var(--flow-tint) 30%,var(--card))}
+.flow li:nth-child(2) a{background:color-mix(in srgb,var(--flow-tint) 20%,var(--card));border-color:color-mix(in srgb,var(--flow-tint) 40%,var(--card))}
+.flow li:nth-child(3) a{background:color-mix(in srgb,var(--flow-tint) 30%,var(--card));border-color:color-mix(in srgb,var(--flow-tint) 50%,var(--card))}
+.flow li:nth-child(4) a{background:color-mix(in srgb,var(--flow-tint) 40%,var(--card));border-color:color-mix(in srgb,var(--flow-tint) 60%,var(--card))}
+.flow li:nth-child(5) a{background:color-mix(in srgb,var(--flow-tint) 50%,var(--card));border-color:color-mix(in srgb,var(--flow-tint) 70%,var(--card))}
+.flow .f-no{font-size:12.5px;font-weight:700;color:var(--clay)}
+.flow b{font-size:15.5px;line-height:1.4}
+@media (max-width:860px){.flow{grid-template-columns:minmax(0,1fr);gap:20px}.flow li+li::before{left:50%;top:-15px;transform:translateX(-50%) rotate(135deg)}}
+
+/* 단계 */
+section.step{padding-top:56px}
+.step-head{display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-bottom:14px}
+.num{display:inline-flex;align-items:center;font-size:19px;font-weight:700;letter-spacing:.04em;color:#fff;background:var(--clay);border-radius:12px;padding:6px 18px;box-shadow:0 5px 0 -1px color-mix(in srgb,var(--clay) 40%,transparent),0 14px 24px -14px rgba(60,35,15,.5)}
+.step h2{font-family:var(--f-display);font-weight:700;font-size:clamp(24px,3.6vw,32px);line-height:1.3;margin:6px 0 0;text-wrap:balance}
+.time{display:inline-block;vertical-align:middle;margin-left:6px;font-family:var(--f-body);font-size:13px;font-weight:700;background:var(--clay-soft);color:var(--clay);border-radius:999px;padding:1px 10px}
+.step h3{font-size:19px;font-weight:700;margin:28px 0 6px;line-height:1.45}
+.step p,.step li{max-width:70ch}
+.step ul,.step ol.inner{padding-left:1.25em}
+.step ol.inner li{margin:6px 0}
+.step ol.inner li::marker{font-weight:700;color:var(--clay)}
+
+/* 안내 상자 */
+.note{background:var(--note);color:var(--note-ink);border-radius:12px;padding:14px 16px;margin:16px 0;font-size:15px}
+.warn{background:var(--night);color:var(--night-fg);border:1px solid var(--night-soft);border-radius:12px;padding:14px 16px;margin:16px 0;font-size:15px}
+.warn .ui,.warn kbd{background:var(--night-fg);color:var(--night)}
+.warn a{color:var(--night-fg)}
+kbd,.ui{font-family:var(--f-body);font-weight:700;background:var(--night);color:var(--night-fg);padding:1px 9px;border-radius:6px;font-size:.92em;white-space:nowrap;border:0}
+code{font-family:var(--f-mono);font-size:.9em;background:var(--clay-soft);padding:1px 6px;border-radius:5px}
+
+/* 작업 흐름 다이어그램 */
+.wf{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px;margin:12px 0 20px}
+.wf > i{font-style:normal;color:var(--clay);font-weight:700;align-self:center;font-size:1.1rem}
+.wf-step,.wf-file{display:flex;flex-direction:column;justify-content:center;gap:2px;border-radius:12px;padding:10px 12px;font-size:14px;line-height:1.4;min-width:0}
+.wf-step{background:var(--clay-soft);border:1px solid var(--clay)}
+.wf-step b{color:var(--clay)}
+.wf-file{background:var(--card);border:1px dashed var(--muted)}
+.wf small{font-size:12px;color:var(--muted)}
+.wf-step span,.wf-file span{color:var(--ink)}
+@media (max-width:640px){.wf{flex-direction:column}.wf > i{transform:rotate(90deg)}}
+
+/* 화면 캡처 */
+.shot{margin:12px 0 16px;max-width:640px}
+.shot.gwajam{max-width:280px}
+.shot.gwajam img{background:#fff}
+.shot img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line);box-shadow:0 1px 0 var(--line),0 10px 24px -18px rgba(0,0,0,.35)}
+.shot figcaption{font-size:13px;color:var(--muted);margin-top:8px}
+.folder-link{display:inline-flex;align-items:center;gap:8px;text-decoration:none;padding:10px 16px}
+
+.prep{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0 8px}
+.prep div{border:1px solid var(--line);border-radius:14px;padding:14px 16px;background:var(--card);font-size:15px}
+.prep b{display:block}
+.prep span{color:var(--muted);font-size:14px}
+
+/* 방법 탭 */
+.tabs{margin:20px 0}
+.tablist{display:flex;gap:6px;flex-wrap:wrap;background:var(--night);padding:6px;border-radius:14px;width:max-content;max-width:100%;margin-bottom:10px}
+.tablist button{font:inherit;font-weight:700;font-size:15px;border:0;border-radius:10px;padding:10px 18px;background:transparent;color:var(--night-fg);opacity:.75}
+.tablist button[aria-selected="true"]{background:var(--night-fg);color:var(--night);opacity:1}
+.tabpanel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:6px 18px 14px}
+.tabpanel[hidden]{display:none}
+
+/* 내 정보 입력 */
+.form{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin:18px 0;display:grid;grid-template-columns:1fr 1fr;gap:12px 16px}
+.form .full{grid-column:1/-1}
+.form label{display:flex;flex-direction:column;gap:4px;font-size:14px;font-weight:700;color:var(--ink)}
+.form input,.form select,.form textarea{font:inherit;font-weight:400;font-size:15px;color:var(--ink);background:var(--pick);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.form input:focus,.form select:focus,.form textarea:focus{outline:2px solid var(--clay);outline-offset:1px}
+.form textarea{resize:vertical;min-height:64px;line-height:1.6}
+.form-title{grid-column:1/-1;font-weight:700;font-size:16px;margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button{font:inherit;font-size:14.5px;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:999px;padding:4px 12px}
+.chips button[aria-pressed="true"]{background:var(--clay-soft);border-color:var(--clay);color:var(--clay);font-weight:700}
+.count{font-size:13px;color:var(--muted)}
+.count.over{color:var(--clay);font-weight:700}
+
+/* 프롬프트 상자 */
+.composer{margin:16px 0 8px;border:1px solid var(--night);border-radius:14px;overflow:hidden;background:var(--card)}
+.composer-top{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--night);color:var(--night-fg);padding:10px 14px;font-size:14px;font-weight:600}
+.badge{display:none;padding:1px 8px;border-radius:999px;background:var(--clay);color:#fff;font-size:12px;font-weight:700}
+.badge.show{display:inline-block}
+.composer textarea{display:block;width:100%;border:0;resize:none;background:transparent;color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.75;padding:14px 16px 4px;min-height:100px;overflow:hidden}
+.composer textarea:focus{outline:none}
+.composer:focus-within{border-color:var(--clay)}
+.composer-bar{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 12px 12px 16px;flex-wrap:wrap}
+.hint{font-size:13px;color:var(--muted)}
+.btns{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
+button{font-family:var(--f-body);cursor:pointer}
+.btn{font:inherit;font-size:14px;font-weight:700;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:8px 14px}
+.btn:hover{border-color:var(--clay)}
+.btn.primary{background:var(--clay);color:#fff;border-color:var(--clay)}
+.btn.primary:hover{filter:brightness(1.07)}
+.mini{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px 10px 16px;margin:8px 0;font-size:15px}
+.mini span{white-space:pre-wrap}
+.mini .btn{padding:5px 12px;font-size:13px;flex:none;background:var(--night);color:var(--night-fg);border-color:var(--night)}
+
+/* 도구 표 */
+.tools{width:100%;border-collapse:separate;border-spacing:0;font-size:15px;margin:12px 0 18px;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.tools th,.tools td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+.tools th{background:var(--night);color:var(--night-fg);font-weight:600;font-size:14px}
+.tools tr:last-child td{border-bottom:0}
+.tools td:first-child{white-space:nowrap;font-weight:700}
+.tools a{text-decoration:none}
+.star{color:var(--clay);font-weight:700}
+.tag{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:0 8px;background:var(--note);color:var(--note-ink);white-space:nowrap}
+.courses{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:14px 0}
+.courses div{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;font-size:15px}
+.courses div.main{border:2px solid var(--clay)}
+.courses b{display:block;margin-bottom:4px}
+.courses ol{margin:0;padding-left:1.1em}
+
+/* 스토리보드 */
+.sb-wrap{overflow-x:auto;margin:14px 0;border:1px solid var(--line);border-radius:12px}
+.sb{width:100%;min-width:720px;border-collapse:collapse;background:var(--card);font-size:14px}
+.sb th,.sb td{border:1px solid var(--line);padding:0;vertical-align:top}
+.sb th{background:var(--night);color:var(--night-fg);font-weight:600;padding:8px 10px;font-size:13.5px;border-color:var(--night-soft)}
+.sb td.n{text-align:center;padding:8px 4px;font-weight:700;color:var(--clay);width:44px}
+.sb textarea{display:block;width:100%;min-height:78px;border:0;resize:vertical;background:transparent;color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.55;padding:6px 8px}
+.sb textarea:focus{outline:2px solid var(--clay);outline-offset:-2px}
+.sb-meta{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:10px 0}
+.sb-meta label{display:flex;flex-direction:column;font-size:14px;font-weight:700;gap:3px}
+.sb-meta input{font:inherit;font-weight:400;font-size:15px;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 9px}
+
+/* 확인 체크 (초록 상자) */
+.check{display:flex;gap:10px;align-items:center;margin-top:22px;padding:14px 16px;background:var(--note);color:var(--note-ink);border:2px solid transparent;border-radius:12px;cursor:pointer;font-size:15px;font-weight:600}
+.check input{width:20px;height:20px;accent-color:var(--clay)}
+.check.done{border-color:var(--note-ink)}
+
+details{background:var(--card);border:1px solid var(--line);border-radius:12px;margin:12px 0;padding:0 16px}
+summary{cursor:pointer;padding:12px 0;font-weight:600}
+summary::marker{color:var(--clay)}
+summary:hover{color:var(--clay)}
+details > div{padding:0 0 14px}
+.promise{list-style:none;padding:0!important}
+.promise li{padding:8px 0 8px 30px;position:relative;border-bottom:1px solid var(--line)}
+.promise li::before{content:"✓";position:absolute;left:6px;color:var(--clay);font-weight:700}
+.teacher{margin-top:48px;font-size:13.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:18px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:var(--night);color:var(--night-fg);padding:10px 18px;border-radius:999px;font-size:15px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:20;max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+@media (max-width:1079px){
+  .layout{grid-template-columns:minmax(0,1fr);gap:0;padding-inline:16px}
+  aside{position:sticky;top:0;z-index:5;margin:0 -16px;border-radius:0;padding:8px 12px;max-height:none}
+  .progress,nav a small{display:none}
+  nav ol{flex-direction:row;gap:4px;overflow-x:auto;scrollbar-width:none}
+  nav ol::-webkit-scrollbar{display:none}
+  nav a{white-space:nowrap;padding:7px 12px;border-radius:999px}
+  html{scroll-padding-top:64px}
+  .hero{padding-top:36px}
+}
+@media (max-width:760px){
+  .prep,.courses,.sb-meta{grid-template-columns:1fr}
+  .form{grid-template-columns:1fr}
+}
+
+/* 스토리보드 인쇄 */
+@media print{
+  body.print-sb *{visibility:hidden}
+  body.print-sb #sbPrint, body.print-sb #sbPrint *{visibility:visible}
+  body.print-sb #sbPrint{position:absolute;left:0;top:0;width:100%}
+  body.print-sb .sb-tools{display:none}
+  .sb{min-width:0;font-size:10pt}
+  .sb textarea{min-height:0;resize:none;overflow:visible}
+  aside,.toast{display:none}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside>
+    <p class="brand">AI로 영상 만들기</p>
+    <p class="brand-sub">2차시 실습 · AI로 배우는 한국어</p>
+    <nav aria-label="단계">
+      <ol id="nav">
+        <li><a href="#s0" data-step="0"><span class="dot">0</span>시작하기</a></li>
+        <li><a href="#s1" data-step="1"><span class="dot">1</span>도구 탐색</a></li>
+        <li><a href="#s2" data-step="2"><span class="dot">2</span>이미지 생성</a></li>
+        <li><a href="#s3" data-step="3"><span class="dot">3</span>이미지 변경</a></li>
+        <li><a href="#s4" data-step="4"><span class="dot">4</span>영상 제작</a></li>
+        <li><a href="#s5" data-step="5"><span class="dot">5</span>자막·내레이션</a></li>
+        <li><a href="#s6" data-step="6"><span class="dot">6</span>스토리보드</a></li>
+        <li><a href="#s7" data-step="7"><span class="dot">7</span>마무리</a></li>
+        <li><a href="#help"><span class="dot">?</span>문제 해결</a></li>
+      </ol>
+    </nav>
+    <div class="progress">진행 <span id="pct">0</span>%<div class="bar"><span id="barfill"></span></div></div>
+  </aside>
+
+  <main>
+  <div class="wrap">
+    <header class="hero">
+      <div class="kicker">AI로배우는한국어 · AI 영상 제작 (2차시)</div>
+      <h1>AI 영상 제작 <em>실습</em></h1>
+      <div class="flow-box">
+        <h3>오늘 수업의 흐름</h3>
+        <ol class="flow" aria-label="오늘 수업">
+          <li><a href="#s2"><span class="f-no">①</span><b>고려대학교 학생 이미지 생성</b></a></li>
+          <li><a href="#s3"><span class="f-no">②</span><b>이미지 변경</b></a></li>
+          <li><a href="#s4"><span class="f-no">③</span><b>영상 제작</b></a></li>
+          <li><a href="#s5"><span class="f-no">④</span><b>자막·내레이션</b></a></li>
+          <li><a href="#s6"><span class="f-no">⑤</span><b>스토리보드</b></a></li>
+        </ol>
+      </div>
+    </header>
+
+    <!-- 0 -->
+    <section class="step" id="s0">
+      <div class="step-head"><span class="num">준비</span>
+        <h2>시작하기</h2></div>
+      <h3>오늘 만들 것</h3>
+      <ul>
+        <li><b>영상 1개</b>: 과잠을 입은 내 캐릭터가 고려대학교 본관 앞 중앙광장을 걸으면서 인사하는 영상 (15초)</li>
+        <li><b>영상 스토리보드</b></li>
+      </ul>
+      <h3>편한 작업을 위한 팁</h3>
+      <p>만든 그림과 영상은 바로 <b>내 컴퓨터에 저장</b>하기<br>파일 이름에 번호를 붙이면 찾기 쉬움. 예: <span class="ui" data-tpl="1_고려대 {name}.png"></span>, <span class="ui" data-tpl="2_{name}_과잠.png"></span></p>
+    </section>
+
+    <!-- 1 -->
+    <section class="step" id="s1">
+      <div class="step-head"><span class="num">도구 탐색</span>
+        <h2>AI 영상 제작 도구 탐색 <span class="time">5분</span></h2></div>
+      <div class="warn"><b>무료 계정 주의:</b><br>· 무료로 쓸 수 있는 횟수와 요금은 자주 바뀌기 때문에 무료 횟수를 다 쓸 경우 다른 아이디로 로그인하여 사용하기.<br>· 다른 도구로 바꾸어 작업해도 좋음.</div>
+
+      <h3>① 이미지 제작하기</h3>
+      <table class="tools">
+        <tr><th>도구</th><th>잘하는 것</th><th>가격</th></tr>
+        <tr><td><span class="star">★</span> <a href="https://flow.google.com" target="_blank" rel="noopener">Google Flow</a></td><td>이미지 제작, 캐릭터 저장 후 다시 불러오기</td><td><span class="tag">무료로 시작</span></td></tr>
+        <tr><td><a href="https://gemini.google.com" target="_blank" rel="noopener">Gemini</a></td><td>이미지 제작, 이미지 수정</td><td><span class="tag">무료로 시작</span></td></tr>
+        <tr><td><a href="https://chatgpt.com" target="_blank" rel="noopener">ChatGPT</a></td><td>설명을 잘 알아듣고 애니메이션 그림을 감성 있게 그림</td><td><span class="tag">무료로 시작</span></td></tr>
+        <tr><td><a href="https://www.canva.com" target="_blank" rel="noopener">Canva</a></td><td>그림을 만들고 바로 디자인, 포스터까지 제작 가능</td><td><span class="tag">무료로 시작</span></td></tr>
+        <tr><td><a href="https://www.midjourney.com" target="_blank" rel="noopener">Midjourney</a></td><td>예술 작품 같은 아주 멋진 이미지 제작</td><td><span class="tag">유료</span></td></tr>
+      </table>
+
+      <h3>② 캐릭터 움직이기·말하게 하기</h3>
+      <table class="tools">
+        <tr><th>도구</th><th>잘하는 것</th><th>가격</th></tr>
+        <tr><td><span class="star">★</span> <a href="https://flow.google.com" target="_blank" rel="noopener">Google Flow (Veo)</a></td><td>이미지, 동영상 제작</td><td><span class="tag">무료 횟수 제한</span></td></tr>
+        <tr><td><a href="https://www.hedra.com" target="_blank" rel="noopener">Hedra</a></td><td>그림 + 대사로 영상 제작</td><td><span class="tag">무료로 시작</span></td></tr>
+        <tr><td><a href="https://www.heygen.com" target="_blank" rel="noopener">HeyGen</a></td><td>사람처럼 말하는 아바타</td><td><span class="tag">무료로 시작</span></td></tr>
+        <tr><td><a href="https://klingai.com" target="_blank" rel="noopener">Kling</a></td><td>자연스러운 움직임</td><td><span class="tag">무료로 시작</span></td></tr>
+        <tr><td><a href="https://runwayml.com" target="_blank" rel="noopener">Runway</a></td><td>영화 같은 장면</td><td><span class="tag">유료 위주</span></td></tr>
+      </table>
+
+      <h3>③ 목소리(내레이션)</h3>
+      <table class="tools">
+        <tr><th>도구</th><th>잘하는 것</th><th>가격</th></tr>
+        <tr><td><span class="star">★</span> CapCut 텍스트 음성 변환</td><td>편집하면서 바로 목소리 넣기 가능</td><td><span class="tag">무료로 시작</span></td></tr>
+        <tr><td><a href="https://vrew.ai" target="_blank" rel="noopener">Vrew</a> AI 목소리</td><td>글을 붙여 넣으면 한국어 목소리로 읽어 줌. 자막과 함께 쓰기 편함</td><td><span class="tag">무료로 시작</span></td></tr>
+        <tr><td><a href="https://elevenlabs.io" target="_blank" rel="noopener">ElevenLabs</a></td><td>세계에서 가장 많이 쓰는 AI 목소리. 아주 자연스러움</td><td><span class="tag">무료로 시작</span></td></tr>
+        <tr><td><a href="https://clovadubbing.naver.com" target="_blank" rel="noopener">클로바더빙</a> · <a href="https://typecast.ai" target="_blank" rel="noopener">타입캐스트</a></td><td>한국 회사 제품. 한국어 목소리가 많음</td><td><span class="tag">무료로 시작</span></td></tr>
+      </table>
+
+      <h3>④ 자막·편집</h3>
+      <table class="tools">
+        <tr><th>도구</th><th>잘하는 것</th><th>가격</th></tr>
+        <tr><td><span class="star">★</span> <a href="https://www.capcut.com" target="_blank" rel="noopener">CapCut</a></td><td>세계에서 가장 많이 쓰는 쉬운 편집 도구, 휴대폰 앱 제공</td><td><span class="tag">무료로 시작</span></td></tr>
+        <tr><td><span class="star">★</span> <a href="https://vids.google.com" target="_blank" rel="noopener">Google Vids</a></td><td>Google 계정과 연동되는 영상 생성 + 편집 도구</td><td><span class="tag">무료로 시작</span></td></tr>
+        <tr><td><a href="https://vrew.ai" target="_blank" rel="noopener">Vrew</a></td><td>한국어 자막 자동 생성. 문서 수정 편집 방식</td><td><span class="tag">무료로 시작</span></td></tr>
+        <tr><td>Canva · Clipchamp</td><td>Canva는 웹, Clipchamp는 윈도우</td><td><span class="tag">무료로 시작</span></td></tr>
+      </table>
+    </section>
+
+    <!-- 2 -->
+    <section class="step" id="s2">
+      <div class="step-head"><span class="num">1단계</span>
+        <h2>고려대학교 유학생 캐릭터 이미지 만들기</h2></div>
+      <p>먼저 내 캐릭터 정보를 노란 칸에 쓰기. 쓰지 않으면 예시(린)로 만들어짐.</p>
+
+      <div class="form" id="charForm">
+        <p class="form-title">내 캐릭터 정보</p>
+        <label>이름<input data-var="name" placeholder="린"></label>
+        <label>성별<select data-var="gender"><option value="여자">여자</option><option value="남자">남자</option></select></label>
+        <label class="full">직업<input data-var="job" placeholder="고려대학교 외국인 유학생"></label>
+        <label class="full">머리 모양과 생김새<input data-var="hair" placeholder="어깨까지 오는 검은 단발머리, 동그란 안경"></label>
+        <label class="full">성격<input data-var="personality" placeholder="밝고 친절하고 호기심이 많음"></label>
+        <p class="full count" style="margin:0">그림체: 실제 사진</p>
+      </div>
+
+      <h3>따라 하기</h3>
+      <ol class="inner">
+        <li><a href="https://flow.google.com" target="_blank" rel="noopener">Google Flow</a>(flow.google.com)를 열고 화면 아래 <span class="ui">+ 새 프로젝트</span> 클릭
+          <figure class="shot"><img src="img/flow-01-home.jpg" alt="Google Flow 첫 화면. 아래쪽 가운데에 새 프로젝트 버튼이 있음" loading="lazy"><figcaption>아래쪽 가운데 <b>+ 새 프로젝트</b> 클릭</figcaption></figure></li>
+        <li>왼쪽 메뉴에서 <span class="ui">캐릭터</span> 클릭
+          <figure class="shot"><img src="img/flow-02-project.jpg" alt="Flow 프로젝트 화면. 왼쪽 메뉴에 전체 미디어, 캐릭터, 장면이 있고 아래에 입력창이 있음" loading="lazy"><figcaption>왼쪽 메뉴의 <b>캐릭터</b> 클릭</figcaption></figure></li>
+        <li>아래 프롬프트를 <b>복사</b>해서 <span class="ui">캐릭터를 설명해 주세요…</span> 칸에 붙여 넣고 <span class="ui">→</span> 클릭
+          <figure class="shot"><img src="img/flow-04-character-prompt.jpg" alt="새 캐릭터 화면. 아래 입력창에 캐릭터 프롬프트가 들어가 있음" loading="lazy"><figcaption>① 입력창에 붙여 넣기 → ② <b>→</b> 클릭 → 그림이 마음에 들면 ③ <b>완료</b></figcaption></figure></li>
+        <li>마음에 드는 그림이 나오면 오른쪽 위 <span class="ui">완료</span>를 눌러 캐릭터 저장하기</li>
+      </ol>
+      <div class="composer" data-prompt="p1"></div>
+
+      <p><b>그림 수정</b></p>
+      <div class="mini"><span data-tpl="표정을 더 밝게 웃는 얼굴로 바꿔 줘. 다른 것은 바꾸지 마."></span><button class="btn" data-copy-tpl>복사</button></div>
+      <div class="mini"><span data-tpl="머리를 {hair2|으로} 바꿔 줘. 얼굴과 옷은 그대로 둬."></span><button class="btn" data-copy-tpl>복사</button></div>
+      <div class="note"><b>이 그림이 '캐릭터'임</b><br>다음 단계부터 계속 이 그림을 저장한 캐릭터 이름으로 불러옴.<br>또는 저장하여 이미지 첨부 (<span data-tpl="1_고려대 {name}.png"></span>)</div>
+      <label class="check" data-check="2"><input type="checkbox"> 캐릭터 저장 완료</label>
+    </section>
+
+    <!-- 3 -->
+    <section class="step" id="s3">
+      <div class="step-head"><span class="num">2단계</span>
+        <h2>과잠 입히기</h2></div>
+      <p><b>준비:</b> 과잠 이미지</p>
+      <ol class="inner">
+        <li>아래 버튼을 눌러 과잠 이미지를 바탕화면에 다운로드하기<br>
+          <figure class="shot gwajam"><img src="img/gwajam.png" alt="고려대학교 과잠. 검붉은 몸통, 흰 소매, 가슴에 흰 K 글자" loading="lazy"></figure>
+          <a class="btn primary" id="gwajamDl" style="display:inline-block;margin:6px 6px 0 0;text-decoration:none" href="img/gwajam.png" download="과잠.png">과잠 이미지 다운로드</a>
+          <a class="btn folder-link" style="margin-top:6px" href="https://drive.google.com/file/d/10kOMRryBJ6u2unqt2hFEn9grrqKTahpB/view?usp=drive_link" target="_blank" rel="noopener"><svg aria-hidden="true" width="20" height="18" viewBox="0 0 87.3 78"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/><path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/></svg>구글 드라이브에서 받기</a>
+          <p class="hint" id="gwajamHint" hidden>버튼이 안 되면 위 그림을 오른쪽 클릭(휴대폰은 길게 누르기) → <b>이미지를 다른 이름으로 저장</b></p></li>
+        <li>Flow 입력창에서 <b>① <kbd>@</kbd>를 눌러 저장한 캐릭터 이름 클릭</b> → <b>② 과잠 사진</b> 올리기<br>
+          사진 올리기: 입력창 왼쪽 <span class="ui">+</span> → 왼쪽 아래 <span class="ui">미디어 업로드</span>. 저장한 캐릭터는 같은 창의 <span class="ui">캐릭터</span>에서도 고를 수 있음.
+          <figure class="shot"><img src="img/flow-09-add-media.jpg" alt="입력창의 + 버튼을 누르면 열리는 미디어 선택 창. 왼쪽에 전체, 이미지, 동영상, 음성, 캐릭터, 아바타, 업로드 메뉴와 아래 미디어 업로드 버튼이 있음" loading="lazy"><figcaption><b>+</b> 버튼 → ① <b>캐릭터</b>에서 내 캐릭터 고르기 / ② <b>미디어 업로드</b>로 과잠 사진 올리기</figcaption></figure></li>
+        <li>아래 프롬프트를 복사 후 입력하기</li>
+      </ol>
+      <div class="composer" data-prompt="p2"></div>
+      <p>완성되면 <span class="ui" data-tpl="2_{name}_과잠.png"></span>로 저장하기</p>
+
+      <h3>더 해 보기: 옷·소품 바꾸기</h3>
+      <p><kbd>@</kbd>로 캐릭터를 선택하거나 <span data-tpl="2_{name}_과잠.png"></span> 파일을 올린 뒤 하나씩 보내 보기<br><b>한 번에 하나만</b> 바꿔야 잘 됨.</p>
+      <div class="mini"><span data-tpl="한 손에 두꺼운 전공책을 들고 있게 해 줘. 다른 것은 바꾸지 마."></span><button class="btn" data-copy-tpl>복사</button></div>
+      <div class="mini"><span data-tpl="한복을 입혀 줘. 얼굴, 머리, 그림체는 그대로 둬."></span><button class="btn" data-copy-tpl>복사</button></div>
+      <label class="check" data-check="3"><input type="checkbox"> <span data-tpl="과잠을 입은 그림 저장 완료 (2_{name}_과잠.png)"></span></label>
+    </section>
+
+    <!-- 4 -->
+    <section class="step" id="s4">
+      <div class="step-head"><span class="num">3단계</span>
+        <h2>고려대학교 중앙광장을 걸으며 말하기</h2></div>
+      <p>두 번 나누어 만들기</p>
+      <div class="wf" role="img" aria-label="작업 흐름: 과잠 그림을 올려 장소 그림을 만들고, 그 그림으로 영상을 만듦">
+        <div class="wf-file"><small>준비</small><span data-tpl="2_{name}_과잠.png"></span></div>
+        <i aria-hidden="true">→</i>
+        <div class="wf-step"><small>①</small><b>장소 그림 만들기</b><span>Flow · 중앙광장 프롬프트</span></div>
+        <i aria-hidden="true">→</i>
+        <div class="wf-file"><small>결과</small><span>3_중앙광장.png</span></div>
+        <i aria-hidden="true">→</i>
+        <div class="wf-step"><small>②</small><b>영상으로 제작하기</b><span>Flow 장면 또는 Hedra · 대사</span></div>
+        <i aria-hidden="true">→</i>
+        <div class="wf-file"><small>완성</small><span>4_동영상.mp4</span></div>
+      </div>
+
+      <h3>① 본관 앞 중앙광장에 세우기</h3>
+      <ol class="inner">
+        <li>Flow 입력창에서 <span class="ui">+</span> 버튼으로 <b data-tpl="2_{name}_과잠.png"></b> 올리기 (2단계 그림 참고)</li>
+        <li>아래 프롬프트를 보내고, 완성된 그림을 <span class="ui">3_중앙광장.png</span>로 저장하기</li>
+      </ol>
+      <div class="composer" data-prompt="p3a"></div>
+      <div class="note"><b>팁:</b> 본관 사진을 <b>내가 직접 찍어서</b> 함께 올리면 진짜 고려대학교와 더 비슷해짐.<br>인터넷에서 찾은 사진은 저작권이 있을 수 있으니 유의</div>
+
+      <h3>더 해 보기: 장소 바꾸기</h3>
+      <p><kbd>@</kbd>로 캐릭터를 선택하거나 <span data-tpl="2_{name}_과잠.png"></span> 파일을 올린 뒤 보내 보기</p>
+      <div class="mini"><span data-tpl="프랑스 에펠탑 앞에 서 있는 인증샷으로 만들어 줘. 얼굴과 옷은 그대로 둬."></span><button class="btn" data-copy-tpl>복사</button></div>
+
+      <h3>② 걸으며 말하는 영상 만들기</h3>
+      <p>캐릭터 대사 쓰기.<br>영상 길이는 최대 <b>8초</b><br>8초 = <b>40자 안쪽</b>으로 짧게 써야 함.</p>
+      <div class="form">
+        <label class="full">캐릭터의 대사
+          <textarea data-var="line" placeholder=""></textarea>
+          <span class="count" id="lineCount"></span></label>
+      </div>
+
+      <div class="tabs" data-tabs>
+        <div class="tablist" role="tablist">
+          <button role="tab" aria-selected="true">방법 A: Flow 동영상 ★</button>
+          <button role="tab" aria-selected="false">방법 B: Hedra</button>
+        </div>
+        <div class="tabpanel" role="tabpanel">
+          <ol class="inner">
+            <li>입력창 오른쪽 설정 버튼(<span class="ui">Nano Banana</span>)을 눌러 <span class="ui">동영상</span> → <span class="ui">프레임</span> 고르기. 생성 개수는 <span class="ui">x1</span>로 하면 크레딧 절약
+              <figure class="shot"><img src="img/flow-06-video-settings.jpg" alt="설정 메뉴. 이미지와 동영상 탭, 프레임과 소재, 화면 비율, Veo 모델, 생성 개수 x1부터 x4, 사용 크레딧이 보임" loading="lazy"><figcaption>① 설정 버튼 → ② <b>동영상</b> → ③ <b>프레임</b> → ④ <b>x1</b></figcaption></figure></li>
+            <li>입력창 위 <span class="ui">시작</span> 칸 클릭 → <span class="ui">미디어 업로드</span>로 <b>3_중앙광장.png</b> 올리기
+              <figure class="shot"><img src="img/flow-07-video-frames.jpg" alt="동영상 프레임 모드의 입력창. 위쪽에 시작과 종료 칸이 있음" loading="lazy"><figcaption>입력창 위 <b>시작</b> 칸 클릭</figcaption></figure>
+              <figure class="shot"><img src="img/flow-08-frame-picker.jpg" alt="프레임 이미지 선택 창. 왼쪽 아래에 미디어 업로드 버튼이 있음" loading="lazy"><figcaption>왼쪽 아래 <b>미디어 업로드</b> 클릭 → 3_중앙광장.png 고르기</figcaption></figure></li>
+            <li>아래 프롬프트를 복사해서 보내기</li>
+            <li>영상을 눌러 <span class="ui">다운로드</span> → <span class="ui">4_동영상.mp4</span>로 저장하기</li>
+          </ol>
+          <div class="composer" data-prompt="p3b"></div>
+          <div class="warn">주의: 무료 계정은 하루에 만들 수 있는 영상 수에 제한이 있음. 프롬프트를 잘 확인하고 보내기.</div>
+        </div>
+        <div class="tabpanel" role="tabpanel" hidden>
+          <p>Hedra는 <b>입 모양이 아주 정확</b>함. 대신 걷는 움직임은 작음.</p>
+          <ol class="inner">
+            <li><a href="https://www.hedra.com" target="_blank" rel="noopener">hedra.com</a>에 구글 계정으로 로그인하기</li>
+            <li><span class="ui">Create</span>(만들기) → 캐릭터 영상 메뉴 고르기</li>
+            <li><b>이미지</b> 칸에 3_중앙광장.png 올리기</li>
+            <li><b>음성</b> 칸에서 글로 쓰기(Text)를 고르고 아래 <b>대사</b> 붙여 넣기. 목소리는 한국어를 지원하는 목소리를 골라 들어 보기</li>
+            <li><b>프롬프트</b> 칸에 아래 <b>움직임 프롬프트</b>를 붙여 넣고 <span class="ui">Generate</span>(만들기) 클릭</li>
+          </ol>
+          <div class="mini"><span data-tpl="{line}"></span><button class="btn" data-copy-tpl>대사 복사</button></div>
+          <div class="composer" data-prompt="p3c"></div>
+        </div>
+      </div>
+
+      <p><b>영상 확인하기</b></p>
+      <ul>
+        <li>얼굴과 과잠이 1·2단계 그림과 같은지 확인</li>
+        <li>영상의 자연스러움 확인</li>
+      </ul>
+      <label class="check" data-check="4"><input type="checkbox"> 영상 저장 완료 (4_동영상.mp4)</label>
+    </section>
+
+    <!-- 5 -->
+    <section class="step" id="s5">
+      <div class="step-head"><span class="num">4단계</span>
+        <h2>내레이션·자막 넣기</h2></div>
+      <h3>자막과 목소리 넣기 (CapCut)</h3>
+      <ol class="inner">
+        <li><a href="https://www.capcut.com/editor" target="_blank" rel="noopener">capcut.com</a>(웹)이나 CapCut 앱 열기</li>
+        <li>가운데 <span class="ui">+ 업로드하려면 클릭하세요</span>를 눌러 <b>4_동영상.mp4</b>를 넣고, 아래 타임라인으로 끌어 놓기
+          <figure class="shot"><img src="img/capcut-01-editor.jpg" alt="CapCut 편집 화면. 가운데에 업로드 버튼, 아래에 타임라인이 있음" loading="lazy"><figcaption>① 가운데 <b>+</b> 클릭 → 영상 고르기 → ② 아래 타임라인으로 끌어 놓기</figcaption></figure></li>
+        <li>왼쪽 메뉴 <span class="ui">캡션</span> → <span class="ui">자동 캡션</span> → 언어 <span class="ui">한국어</span>를 고르면 자막이 생김. 틀린 글자 고치기
+          <figure class="shot"><img src="img/capcut-02-captions.jpg" alt="캡션 메뉴. 자동 캡션, 수동 캡션, 캡션 파일 업로드, 자동 가사가 있음" loading="lazy"><figcaption>① 왼쪽 <b>캡션</b> → ② <b>자동 캡션</b></figcaption></figure></li>
+        <li>왼쪽 메뉴 <span class="ui">텍스트</span> → <span class="ui">본문 추가</span>를 누르고 화면의 글자를 내레이션 원고로 바꾸기
+          <figure class="shot"><img src="img/capcut-03-text.jpg" alt="텍스트 메뉴에서 본문 추가를 누른 화면. 영상 위에 글자 상자가, 타임라인에 글자 막대가 생김" loading="lazy"><figcaption>① 왼쪽 <b>텍스트</b> → ② <b>본문 추가</b> → ③ 글자 상자를 눌러 원고 입력</figcaption></figure></li>
+        <li>글자를 누른 상태에서 오른쪽 메뉴 <span class="ui">텍스트에서 음성으로</span> → <span class="ui">카테고리</span>에서 목소리 고르기
+          <figure class="shot"><img src="img/capcut-04-tts.jpg" alt="오른쪽에 열린 텍스트에서 음성으로 창. 카테고리와 음성 목록이 있음" loading="lazy"><figcaption>① 오른쪽 <b>텍스트에서 음성으로</b> → ② <b>카테고리</b>(예: 내레이션) → 목소리 고르기</figcaption></figure></li>
+        <li>오른쪽 위 <span class="ui">내보내기</span> → <span class="ui">다운로드</span> → 형식 <span class="ui">MP4</span> 확인 → <span class="ui">내보내기</span>를 눌러 <span class="ui">(내 이름) 영상 실습.mp4</span>로 저장하기
+          <figure class="shot"><img src="img/capcut-05-export.jpg" alt="내보내기 메뉴. 아래쪽에 다운로드 버튼이 있음" loading="lazy"><figcaption>① 오른쪽 위 <b>내보내기</b> → ② 아래 <b>다운로드</b></figcaption></figure>
+          <figure class="shot"><img src="img/capcut-06-export-settings.jpg" alt="내보내기 설정. 이름, 해상도 720p, 품질, 프레임 속도 30fps, 형식 MP4, 아래 내보내기 버튼" loading="lazy"><figcaption>① 이름을 <b>(내 이름) 영상 실습</b>으로 바꾸기 → ② 형식 <b>MP4</b> 확인 → ③ <b>내보내기</b></figcaption></figure></li>
+      </ol>
+      <div class="note"><b>좋은 자막</b><br>· 한 줄에 15자 정도 · 화면 아래 가운데 · 배경과 잘 구분되는 색</div>
+      <label class="check" data-check="5"><input type="checkbox"> 자막과 내레이션을 넣어 저장 완료 ((내 이름) 영상 실습.mp4)</label>
+    </section>
+
+    <!-- 6 -->
+    <section class="step" id="s6">
+      <div class="step-head"><span class="num">5단계</span>
+        <h2>스토리보드 만들기</h2></div>
+      <p>스토리보드는 영상의 <b>설계도</b>를 말함.<br>3·4차시에는 조별로 스토리보드를 보면서 영상을 제작함.</p>
+      <div class="form">
+        <label class="full">영상 주제<input data-var="topic" placeholder=""></label>
+        <label>보는 사람<input data-var="audience" placeholder="고려대학교에 오고 싶은 외국인 친구"></label>
+        <label>영상 길이<input data-var="length" placeholder="16초 ~ 32초 (8초 * 2~4개)"></label>
+      </div>
+      <h3>① AI에게 스토리보드 초안 받기</h3>
+      <div class="composer" data-prompt="p5"></div>
+
+      <h3>② 내 스토리보드 쓰기</h3>
+      <p>AI 초안을 보고 <b>내 생각으로 고쳐서</b> 아래 표에 쓰기.</p>
+      <div id="sbPrint">
+        <div class="sb-meta">
+          <label>이름<input id="sbWho" placeholder="내 이름"></label>
+          <label>영상 제목<input id="sbTitle" placeholder="영상 제목"></label>
+          <label>사용할 도구<input id="sbTools" placeholder="Flow, CapCut"></label>
+        </div>
+        <div class="sb-wrap">
+          <table class="sb" id="sb">
+            <thead><tr><th>장면</th><th>장소·화면 설명</th><th>캐릭터 대사</th><th>내레이션·자막</th><th>길이</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="btns sb-tools" style="margin-left:0">
+        <button class="btn" id="sbExample">예시 보기</button>
+        <button class="btn" id="sbClear">모두 지우기</button>
+        <button class="btn" id="sbCopy">표 복사 (구글 문서에 붙여 넣기)</button>
+        <button class="btn primary" id="sbPrintBtn">인쇄 · PDF로 저장</button>
+      </div>
+      <div class="note"><b>좋은 스토리보드</b><br>· 장면 하나는 8초 안 · 장면마다 장소나 행동이 다름 · 처음은 인사, 끝은 마무리 인사</div>
+      <label class="check" data-check="6"><input type="checkbox"> 스토리보드 작성·저장 완료</label>
+    </section>
+
+    <!-- 7 -->
+    <section class="step" id="s7">
+      <div class="step-head"><span class="num">정리</span>
+        <h2>마무리</h2></div>
+      <h3>제출하기</h3>
+      <ul>
+        <li><b>(내 이름) 영상 실습.mp4</b> (자막·내레이션이 들어간 영상)</li>
+        <li><b>스토리보드</b> (PDF 또는 구글 문서 링크)</li>
+      </ul>
+      <p><b>아래 링크에 동영상 올리기</b></p>
+      <a class="btn folder-link" href="https://drive.google.com/drive/folders/1vgxi8K5lLwI5HSITrUIYJcYZEHLsR7N_?usp=sharing" target="_blank" rel="noopener"><svg aria-hidden="true" width="20" height="18" viewBox="0 0 87.3 78"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/><path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/></svg>AI 영상 실습 동영상 업로드 (1126)</a>
+      <h3>AI로 영상을 만들 때 주의사항</h3>
+      <ul class="promise">
+        <li>친구나 유명한 사람의 얼굴 사진을 <b>허락 없이</b> 쓰지 않기</li>
+        <li>다른 사람이 찍은 사진, 그림, 음악은 저작권 확인하기</li>
+        <li>영상 시작 전 <b>"이 영상은 AI로 만들었습니다"</b>라고 쓰기</li>
+        <li>사실이 아닌 내용을 진짜처럼 보이게 만들지 않기</li>
+      </ul>
+      <div class="note"><b>다음 시간(3·4차시)</b>: 조별 영상 제작</div>
+      <label class="check" data-check="7"><input type="checkbox"> 영상 제출 완료</label>
+    </section>
+
+    <!-- HELP -->
+    <section class="step" id="help">
+      <div class="step-head"><span class="num">도움</span>
+        <h2>문제가 생겼을 때</h2></div>
+      <details><summary>캐릭터 얼굴이 그릴 때마다 달라짐</summary><div>
+        <p>Flow에서 매번 <kbd>@</kbd>로 <b>저장한 캐릭터</b>를 불러오거나 <b data-tpl="1_고려대 {name}.png"></b> 파일을 함께 올리기. 그리고 아래 프롬프트 함께 보내기.</p>
+        <div class="mini"><span>캐릭터의 얼굴, 머리 모양, 그림체를 똑같이 지켜 줘. 얼굴은 절대 바꾸지 마.</span><button class="btn" data-copy="캐릭터의 얼굴, 머리 모양, 그림체를 똑같이 지켜 줘. 얼굴은 절대 바꾸지 마.">복사</button></div>
+      </div></details>
+      <details><summary>과잠의 글자가 이상하게 나옴</summary><div>
+        <p>AI는 글자를 잘 못 쓰니 글자를 짧게 하거나 아예 빼 달라고 하기.</p>
+        <div class="mini"><span>과잠 가슴에 있는 글자를 지우고, 영어 대문자 'KU' 두 글자만 크고 또렷하게 써 줘.</span><button class="btn" data-copy="과잠 가슴에 있는 글자를 지우고, 영어 대문자 'KU' 두 글자만 크고 또렷하게 써 줘.">복사</button></div>
+      </div></details>
+      <details><summary>손가락이나 몸 모양이 이상함</summary><div>
+        <div class="mini"><span>손가락이 다섯 개인 자연스러운 손으로 고쳐 줘. 다른 것은 바꾸지 마.</span><button class="btn" data-copy="손가락이 다섯 개인 자연스러운 손으로 고쳐 줘. 다른 것은 바꾸지 마.">복사</button></div>
+      </div></details>
+      <details><summary>동영상 만들기 메뉴가 없음</summary><div>
+        <p>계정이나 나라에 따라 메뉴가 없을 수 있음. 무료 횟수를 다 쓴 경우에도 마찬가지.<br><b>방법 B: Hedra</b>로 제작하기</p>
+      </div></details>
+      <details><summary>영상 속 한국어 발음이 어색함</summary><div>
+        <ul>
+          <li>대사를 더 <b>짧고 쉬운 문장</b>으로 바꿔 보기</li>
+          <li>숫자와 영어는 한글로 쓰기. 예: 2026년 → 이천이십육 년, KU → 케이유</li>
+          <li>그래도 어색하면 CapCut에서 원래 소리를 끄고 <b>텍스트 음성 변환</b> 목소리로 바꾸기</li>
+        </ul>
+      </div></details>
+      <details><summary>"만들 수 없어요"라는 답이 나옴</summary><div>
+        <p>어린 아이, 실제 사람 이름, 유명인, 회사 로고가 들어가면 AI가 거절할 수 있음.<br>그 말을 빼고 다시 보내기. 예: '고려대학교 로고' → '가슴에 KU 글자'</p>
+      </div></details>
+    </section>
+  </div>
+  </main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ===== 기본값 (노란 칸을 비워 두면 이 값이 들어갑니다) ===== */
+const DEFAULTS = {
+  name:"린", gender:"여자", job:"고려대학교 외국인 유학생",
+  hair:"어깨까지 오는 검은 단발머리, 동그란 안경", personality:"밝고 친절하고 호기심이 많음",
+  style:"실제 사진처럼 자연스러운 스타일", ratio:"가로로 긴 16:9 화면",
+  line:"", topic:"", audience:"고려대학교에 오고 싶은 외국인 친구", length:"16초 ~ 32초 (8초 * 2~4개)"
+};
+/* 기본값이 이름에 따라 바뀌는 것들 */
+function derived(v){
+  if(!v.line) v.line = `안녕하세요! 저는 고려대학교 유학생 ${v.name}입니다. 오늘은 우리 학교를 소개할게요.`;
+  if(!v.topic) v.topic = `고려대학교 유학생 ${v.name}의 하루`;
+  v.hair2 = v.gender === "남자" ? "짧은 갈색 머리" : "긴 갈색 웨이브 머리";
+  return v;
+}
+
+/* ===== 프롬프트 원문 ===== */
+const PROMPTS = {
+p1:`고려대학교에 다니는 외국인 유학생 이미지를 그려 줘.
+
+- 이름: {name}
+- 나이: 20대 초반 대학생
+- 성별: {gender}
+- 생김새: {hair}
+- 성격: {personality} (표정에 성격이 보이게)
+- 옷: 흰색 티셔츠, 청바지, 흰색 운동화
+- 자세: 정면을 보고 서 있는 전신 모습, 머리부터 발끝까지 다 보이게
+- 배경: 아무것도 없는 깨끗한 흰색 배경
+- 그림체: 실사
+- 화면: {ratio}
+- 그림 안에 글자는 넣지 마.`,
+
+p2:`고려대학교 과잠이야. 과잠을 입혀 줘.
+- {name}의 얼굴, 머리 모양, 몸, 그림체는 첫 번째 사진과 똑같이 지켜 줘.
+- 과잠의 색, 무늬, 글자는 두 번째 사진과 똑같이 해 줘.
+- 과잠 앞은 열려 있고, 안에는 흰색 티셔츠를 입고 있어.
+- 전신이 다 보이게 해 줘.`,
+
+p3a:`이 사진 속 {name|을를} 고려대학교 본관 앞 중앙광장에 서 있게 해 줘.
+
+- 장소: 넓은 초록색 잔디 고려대학교 중앙광장. 뒤에는 고려대학교 본관
+- 날씨: 맑은 가을 오후, 따뜻한 햇빛
+- 주변: 멀리 걸어가는 대학생 몇 명
+- {name}: 광장 앞쪽 길에 서서 카메라를 보고 밝게 웃고 있어. 전신이 다 보여.
+- {name}의 얼굴, 머리, 과잠, 그림체는 사진과 똑같이 지켜 줘.
+- 화면: {ratio}`,
+
+p3b:`- 장면: {name|이가} 고려대학교 본관 앞 중앙광장의 잔디밭 옆 길을 천천히 걸어오면서, 카메라를 보고 웃으며 말한다.
+- 카메라: {name}의 앞에서 천천히 뒤로 물러나며 따라간다.
+- 대사(한국어, 밝고 또박또박한 20대 {gender} 목소리): "{line}"
+- 입 모양을 한국어 대사에 맞춰 줘.
+- 마지막에 {name|이가} 손을 흔든다.
+- 배경 소리: 새소리, 멀리서 학생들이 이야기하는 작은 소리
+- {name}의 얼굴, 머리, 과잠은 그림과 똑같이 지켜 줘.
+- 화면에 자막이나 글자는 넣지 마.`,
+
+p3c:`{name|이가} 고려대학교 중앙광장에서 천천히 걸으며 카메라를 보고 밝게 웃으며 말한다. 머리와 어깨가 자연스럽게 움직이고, 마지막에 손을 흔든다. 뒤로 잔디밭과 학생들이 지나간다.`,
+
+p4:`나는 '{topic}' 영상을 만들고 있어.
+영상 첫 장면에서 {name|이가} 중앙광장을 걸으며 "{line}"라고 말해.
+그 뒤에 이어질 내레이션 원고를 써 줘.
+
+- 보는 사람: {audience}
+- 길이: 읽으면 7초 정도
+- 내용: 고려대학교와 {name}의 대학 생활 소개
+- 한국어를 배우는 외국인도 알아들을 수 있는 쉬운 문장
+- '-해요'체로, 한 문장은 20자 안쪽, 모두 2문장
+- 한 문장을 한 줄씩 써 줘. (자막으로 쓸 거야)
+- 마지막 문장은 마무리 인사로 해 줘.`,
+
+p5:`나는 AI로 {length} 길이의 영상을 만들려고 해. 스토리보드를 만들어 줘.
+
+- 주제: {topic}
+- 주인공: {name} ({job}, 성격: {personality})
+- 보는 사람: {audience}
+- 그림체: {style}
+
+[만드는 방법]
+- 6장면으로 나누어 표로 만들어 줘.
+- 표의 칸: 장면 번호 / 장소·화면 설명 / 캐릭터 대사 / 내레이션·자막 / 길이(초)
+- 장면 하나는 8초 안으로 해 줘.
+- 대사와 내레이션은 한국어 중급 이상으로 써 줘.
+- 첫 장면은 인사, 마지막 장면은 마무리 인사로 해 줘.
+
+[표 아래에 추가]
+- 장면마다 그림을 만들 때 쓸 '그림 프롬프트'를 하나씩 써 줘.
+- 모든 그림 프롬프트에 "{name}의 얼굴, 머리, 과잠은 첫 번째 사진과 똑같이 지켜 줘."를 꼭 넣어 줘.`
+};
+const LABELS = {
+  p1:"1단계 · 캐릭터 만들기", p2:"2단계 · 과잠 입히기",
+  p3a:"3단계 ① · 중앙광장 그림", p3b:"3단계 ② · Flow 동영상 프롬프트", p3c:"Hedra 움직임 프롬프트",
+  p4:"4단계 · 내레이션 원고", p5:"스토리보드 초안"
+};
+
+/* 브라우저 저장소를 못 쓰는 환경에서도 작동하도록 메모리에도 함께 저장 */
+const mem = {};
+const store = {
+  get(k){ k='vid2b:'+k; if(k in mem) return mem[k]; try{ return localStorage.getItem(k); }catch(e){ return null; } },
+  set(k,v){ k='vid2b:'+k; mem[k]=v; try{ localStorage.setItem(k,v); }catch(e){} },
+  del(k){ k='vid2b:'+k; mem[k]=null; try{ localStorage.removeItem(k); }catch(e){} }
+};
+const toastEl = document.getElementById('toast');
+let tTimer;
+function toast(msg){ toastEl.textContent = msg; toastEl.classList.add('show'); clearTimeout(tTimer); tTimer = setTimeout(()=>toastEl.classList.remove('show'), 1800); }
+async function copyText(text){
+  try{ await navigator.clipboard.writeText(text); return true; }
+  catch(e){
+    const ta = document.createElement('textarea'); ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select(); let ok=false; try{ ok=document.execCommand('copy'); }catch(err){}
+    document.body.removeChild(ta); return ok;
+  }
+}
+
+/* ===== 내 정보 ===== */
+function getVars(){
+  const v = {...DEFAULTS};
+  Object.keys(DEFAULTS).forEach(k=>{ const s = store.get('var:'+k); if(s && s.trim()) v[k] = s.trim(); });
+  return derived(v);
+}
+/* 받침에 따라 조사 고르기: {name|이가} → 미나가 / 린이 */
+function josa(word, kind){
+  const c = word.charCodeAt(word.length-1);
+  const jong = (c >= 0xAC00 && c <= 0xD7A3) ? (c-0xAC00)%28 : 0;
+  if(kind === '으로') return word + (jong && jong !== 8 ? '으로' : '로');
+  return word + (jong ? kind[0] : kind[1]);
+}
+function fill(tpl){
+  const v = getVars();
+  return tpl.replace(/\{(\w+)(?:\|([^}]+))?\}/g,(m,k,j)=> v[k] === undefined ? m : (j ? josa(v[k], j) : v[k]));
+}
+
+document.querySelectorAll('[data-var]').forEach(el=>{
+  const k = el.dataset.var, s = store.get('var:'+k);
+  if(s !== null) el.value = s;
+  el.addEventListener('input', ()=>{ el.value.trim() ? store.set('var:'+k, el.value) : store.del('var:'+k); renderAll(); });
+});
+document.querySelectorAll('[data-chip]').forEach(group=>{
+  const k = group.dataset.chip, btns = [...group.querySelectorAll('button')];
+  const cur = store.get('var:'+k) || DEFAULTS[k];
+  const mark = val => btns.forEach(b=>b.setAttribute('aria-pressed', b.dataset.val === val ? 'true':'false'));
+  mark(cur);
+  btns.forEach(b=>b.addEventListener('click', ()=>{ store.set('var:'+k, b.dataset.val); mark(b.dataset.val); renderAll(); }));
+});
+
+/* ===== 프롬프트 상자 ===== */
+function autosize(ta){ ta.style.height='auto'; ta.style.height = ta.scrollHeight + 'px'; }
+const boxes = [];
+document.querySelectorAll('.composer').forEach(box=>{
+  const key = box.dataset.prompt;
+  box.innerHTML = `
+    <div class="composer-top"><span>${LABELS[key]}</span><span class="badge">직접 고침</span></div>
+    <textarea spellcheck="false" aria-label="${LABELS[key]} (직접 수정 가능)"></textarea>
+    <div class="composer-bar">
+      <span class="hint">상자 안을 눌러 직접 수정 가능</span>
+      <div class="btns">
+        <button class="btn" data-act="reset">원래대로</button>
+        <button class="btn primary" data-act="copy">복사</button>
+      </div>
+    </div>`;
+  const ta = box.querySelector('textarea'), badge = box.querySelector('.badge');
+  const render = ()=>{
+    const saved = store.get('prompt:'+key);
+    ta.value = saved !== null ? saved : fill(PROMPTS[key]);
+    badge.classList.toggle('show', saved !== null);
+    autosize(ta);
+  };
+  ta.addEventListener('input', ()=>{
+    if(ta.value === fill(PROMPTS[key])) store.del('prompt:'+key); else store.set('prompt:'+key, ta.value);
+    badge.classList.toggle('show', store.get('prompt:'+key) !== null); autosize(ta);
+  });
+  box.querySelector('[data-act="copy"]').addEventListener('click', async ()=>{
+    toast(await copyText(ta.value) ? '복사 완료. AI 입력창에 붙여 넣기' : '복사 실패. 상자 안을 직접 선택해 복사하기');
+  });
+  box.querySelector('[data-act="reset"]').addEventListener('click', ()=>{ store.del('prompt:'+key); render(); toast('처음 프롬프트로 되돌림'); });
+  boxes.push(render);
+});
+
+/* 짧은 프롬프트 */
+const minis = [...document.querySelectorAll('[data-tpl]')];
+document.querySelectorAll('[data-copy-tpl]').forEach(b=>{
+  b.addEventListener('click', async ()=>{
+    const t = b.parentElement.querySelector('[data-tpl]').textContent;
+    toast(await copyText(t) ? '복사 완료' : '복사 실패. 직접 선택해 복사하기');
+  });
+});
+document.querySelectorAll('[data-copy]').forEach(b=>{
+  b.addEventListener('click', async ()=>{ toast(await copyText(b.dataset.copy) ? '복사 완료' : '복사 실패. 직접 선택해 복사하기'); });
+});
+
+/* 대사 글자 수 */
+const lineCount = document.getElementById('lineCount');
+function renderCount(){
+  const n = getVars().line.replace(/\s/g,'').length;
+  lineCount.textContent = `${n}자 (띄어쓰기 빼고) 8초 영상으로는 40자 이내`;
+  lineCount.classList.toggle('over', n > 40);
+}
+
+/* placeholder를 이름에 맞게 */
+function renderPlaceholders(){
+  const v = getVars();
+  const line = document.querySelector('[data-var="line"]'), topic = document.querySelector('[data-var="topic"]');
+  line.placeholder = `안녕하세요! 저는 고려대학교 유학생 ${v.name}입니다. 오늘은 우리 학교를 소개할게요.`;
+  topic.placeholder = `고려대학교 유학생 ${v.name}의 하루`;
+}
+
+function renderAll(){
+  boxes.forEach(r=>r());
+  minis.forEach(s=>s.textContent = fill(s.dataset.tpl));
+  renderCount(); renderPlaceholders();
+}
+renderAll();
+window.addEventListener('resize', ()=>document.querySelectorAll('.composer textarea').forEach(autosize));
+
+/* ===== 탭 ===== */
+document.querySelectorAll('[data-tabs]').forEach(t=>{
+  const tabs = [...t.querySelectorAll('[role="tab"]')], panels = [...t.querySelectorAll('[role="tabpanel"]')];
+  tabs.forEach((b,i)=>b.addEventListener('click', ()=>{
+    tabs.forEach((x,j)=>x.setAttribute('aria-selected', i===j ? 'true':'false'));
+    panels.forEach((p,j)=>p.hidden = i!==j);
+    requestAnimationFrame(()=>panels[i].querySelectorAll('.composer textarea').forEach(autosize));
+  }));
+});
+
+/* ===== 스토리보드 ===== */
+const SB_COLS = ['scene','line','narr','sec'];
+const sbBody = document.querySelector('#sb tbody');
+for(let i=0;i<=6;i++){
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td class="n">${i}</td>` + SB_COLS.map(c=>`<td${c==='sec'?' style="width:70px"':''}><textarea data-sb="${i}-${c}" aria-label="${i}번 장면 ${c}" placeholder="${c==='sec'?'초':''}"></textarea></td>`).join('');
+  sbBody.appendChild(tr);
+}
+const sbFields = [...document.querySelectorAll('[data-sb]'), document.getElementById('sbWho'), document.getElementById('sbTitle'), document.getElementById('sbTools')];
+const sbKey = el => 'sb:' + (el.dataset.sb || el.id);
+/* 0번 장면 기본값 */
+const SB_DEFAULT = {'0-scene':'도입', '0-narr':'이 영상은 AI로 제작되었습니다.', '0-sec':'2'};
+const sbDef = el => SB_DEFAULT[el.dataset.sb] || '';
+sbFields.forEach(el=>{
+  const s = store.get(sbKey(el)); el.value = s !== null ? s : sbDef(el);
+  el.addEventListener('input', ()=>store.set(sbKey(el), el.value));
+});
+const SB_EXAMPLE = [
+  ['도입','','이 영상은 AI로 제작되었습니다.','2'],
+  ['중앙광장. 린이 본관 앞 잔디밭 옆 길을 걸어온다.','안녕하세요! 저는 고려대학교 유학생 린입니다.','린은 외국에서 온 유학생이에요.','8'],
+  ['강의실. 린이 친구들과 수업을 듣는다.','수업은 어렵지만 재미있어요.','','6'],
+  ['중앙도서관. 린이 책을 펴고 공부한다.','시험 기간에는 여기서 살아요!','','6'],
+  ['학생식당. 린이 친구와 점심을 먹는다.','오늘 메뉴는 김치볶음밥이에요.','','6'],
+  ['가을 캠퍼스 길. 린이 단풍 사이를 걷는다.','가을의 고려대학교는 정말 예뻐요.','','6'],
+  ['다시 중앙광장. 린이 손을 흔든다.','고려대학교에 놀러 오세요! 안녕!','','6']
+];
+/* 확인 창 대신 '한 번 더 누르기' (확인 창이 막힌 환경에서도 작동) */
+function armed(btn, msg){
+  if(btn.dataset.armed === '1'){ clearTimeout(btn._t); btn.dataset.armed=''; btn.textContent = btn._label; return true; }
+  btn._label = btn._label || btn.textContent; btn.dataset.armed = '1'; btn.textContent = '한 번 더 누르기';
+  toast(msg);
+  btn._t = setTimeout(()=>{ btn.dataset.armed=''; btn.textContent = btn._label; }, 4000);
+  return false;
+}
+document.getElementById('sbExample').addEventListener('click', (e)=>{
+  const hasText = [...document.querySelectorAll('[data-sb]')].some(t=>t.value.trim() && t.value !== sbDef(t));
+  if(hasText && !armed(e.currentTarget, '지금 쓴 내용이 예시로 바뀜. 계속하려면 한 번 더 누르기')) return;
+  SB_EXAMPLE.forEach((row,i)=>row.forEach((val,j)=>{ const el = document.querySelector(`[data-sb="${i}-${SB_COLS[j]}"]`); el.value = val; store.set(sbKey(el), val); }));
+  toast('예시 넣기 완료. 내 내용으로 고쳐 보기');
+});
+document.getElementById('sbClear').addEventListener('click', (e)=>{
+  if(!armed(e.currentTarget, '모두 지우려면 한 번 더 누르기')) return;
+  sbFields.forEach(el=>{ el.value = sbDef(el); store.del(sbKey(el)); }); toast('모두 지움');
+});
+document.getElementById('sbCopy').addEventListener('click', async ()=>{
+  const head = ['장면','장소·화면 설명','캐릭터 대사','내레이션·자막','길이(초)'];
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>');
+  const rows = [];
+  for(let i=0;i<=6;i++) rows.push([String(i), ...SB_COLS.map(c=>document.querySelector(`[data-sb="${i}-${c}"]`).value)]);
+  const meta = `이름: ${sbFields.at(-3).value}  /  제목: ${sbFields.at(-2).value}  /  도구: ${sbFields.at(-1).value}`;
+  const tsv = meta + '\n' + [head, ...rows].map(r=>r.map(c=>c.replace(/\s*\n\s*/g,' ')).join('\t')).join('\n');
+  const html = `<p>${esc(meta)}</p><table border="1" style="border-collapse:collapse"><tr>${head.map(h=>`<th>${h}</th>`).join('')}</tr>${rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</table>`;
+  try{
+    await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([tsv],{type:'text/plain'})})]);
+    toast('표 복사 완료. 구글 문서에 붙여 넣기');
+  }catch(e){ toast(await copyText(tsv) ? '표 복사 완료' : '복사 실패'); }
+});
+document.getElementById('sbPrintBtn')?.addEventListener('click', ()=>{
+  document.querySelectorAll('.sb textarea').forEach(autosize);
+  document.body.classList.add('print-sb'); window.print();
+});
+window.addEventListener('afterprint', ()=>document.body.classList.remove('print-sb'));
+
+/* ===== 체크와 진행률 ===== */
+const checks = [...document.querySelectorAll('.check')];
+function refresh(){
+  let n = 0;
+  checks.forEach(c=>{
+    const i = c.dataset.check, on = c.querySelector('input').checked;
+    c.classList.toggle('done', on); if(on) n++;
+    const a = document.querySelector(`nav a[data-step="${i}"]`);
+    if(a){ a.classList.toggle('done', on); a.querySelector('.dot').textContent = on ? '✓' : i; }
+  });
+  const pct = Math.round(n / checks.length * 100);
+  document.getElementById('pct').textContent = pct;
+  document.getElementById('barfill').style.width = pct + '%';
+}
+checks.forEach(c=>{
+  const inp = c.querySelector('input');
+  inp.checked = store.get('check:'+c.dataset.check) === '1';
+  inp.addEventListener('change', ()=>{ store.set('check:'+c.dataset.check, inp.checked ? '1':'0'); refresh(); });
+});
+refresh();
+
+/* 과잠 이미지 다운로드: 일반 웹(GitHub)은 링크 그대로, 아티팩트 화면은 downloads 기능 사용 */
+(async ()=>{
+  const btn = document.getElementById('gwajamDl'), hint = document.getElementById('gwajamHint');
+  if(!btn || !window.claude?.use) return;          // 일반 웹: <a download>로 바로 받기
+  let dl = null;
+  try{ dl = await window.claude.use('downloads'); }catch(e){}
+  if(!dl){ hint.hidden = false; return; }          // 기능을 못 쓰면 저장 방법 안내
+  let blob = null;
+  fetch(btn.getAttribute('href')).then(r=>r.blob()).then(b=>{ blob = b; }).catch(()=>{});
+  btn.addEventListener('click', async (e)=>{
+    e.preventDefault();
+    try{
+      const data = blob || await (await fetch(btn.getAttribute('href'))).blob();
+      await dl.save({filename:'과잠.png', data});
+      toast('과잠.png 저장 완료');
+    }catch(err){
+      if(err?.code === 'declined') return;
+      hint.hidden = false; toast('다운로드가 안 되면 그림을 오른쪽 클릭해서 저장하기');
+    }
+  });
+})();
+
+/* 현재 위치 표시 */
+const links = [...document.querySelectorAll('nav a')];
+const io = new IntersectionObserver(es=>{
+  es.forEach(e=>{ if(e.isIntersecting) links.forEach(l=>l.classList.toggle('active', l.getAttribute('href') === '#'+e.target.id)); });
+},{rootMargin:'-30% 0px -60% 0px'});
+document.querySelectorAll('section.step').forEach(s=>io.observe(s));
+</script>
+</body>
+</html>

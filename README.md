@@ -8,3 +8,4 @@
 | 1단계 챗봇 제작 매뉴얼 | [열기](https://jungmkmk99.github.io/Korean-with-AI-2026/chatbot-1/) |
 | 2단계 챗봇 제작 (1) 매뉴얼 | [열기](https://jungmkmk99.github.io/Korean-with-AI-2026/chatbot-2/) |
 | 2단계 챗봇 제작 (2) 매뉴얼 | [열기](https://jungmkmk99.github.io/Korean-with-AI-2026/chatbot-3/) |
+| AI 영상 제작 실습 매뉴얼 (2차시) | [열기](https://jungmkmk99.github.io/Korean-with-AI-2026/video-making/) |
